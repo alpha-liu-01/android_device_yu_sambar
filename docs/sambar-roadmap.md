@@ -149,21 +149,78 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 
 ### 阶段 1：Android 11 能亮屏、有 adb
 
-步骤、boot 镜像格式、哪些一加 2 的配置不能抄，以及已经核对过的捐赠仓库，写在 `docs/sambar-phase-1.md`。
+2026-10-29 完成。记录在 `docs/sambar-phase-1.md`。
 
-完成标准：LineageOS 18.1 点亮 Sharp 面板，Atmel 触控有反应，adb 能进，`/data` 可写。Wi-Fi 保持模块。SELinux 允许 permissive。不需要连接一加 2 实机。新 boot 还没自己亮屏之前不刷 system，也不格式化 userdata。
+完成标准已经达到：LineageOS 18.1 点亮 Sharp 面板，Atmel 触控有反应，adb 开机大约 10 秒能进，`/data` 可写。Wi-Fi 仍是模块。SELinux 仍是 permissive。boot 仍是内核 `#27`。最新 system SHA256 `35b42a50154cd6b995ee5bf089c9302dfcbec735746edd7f467fd5be859ee75e`。
 
-2026-10-29 的进度：步骤 1 到 6 完成，recovery 里的 Sharp 面板已经点亮。步骤 7 已结束。步骤 8 装上 vendor 的 ueventd 规则之后，图形分配器能打开 `/dev/ion` 和 `/dev/kgsl-3d0`，Android 11 开到锁屏，面板和背光亮，触控有反应。adbd 改用阻塞读写后，开机大约 10 秒 adb 就能进。最新 system SHA256 `35b42a50154cd6b995ee5bf089c9302dfcbec735746edd7f467fd5be859ee75e`。boot 仍是内核 `#27`。`/data` 可写还没单独核对，壁纸有横向扫描线。记录在 `docs/sambar-phase-1.md`。
+带到阶段 2 的缺口：壁纸有横向扫描线，GLES 仍是 SwiftShader，gralloc 报 `Unknown Chip ID 0`。USB 被 init 钉成只有 adb。没有 Gatekeeper，锁屏凭证校验不了。manifest 里的 `radio@1.1` 没有进程注册，开机一直在要这个服务。
 
-### 阶段 2：通信和音频
+### 阶段 2：18.1 做到能日常使用
 
-在 18.1 上补 RIL（继续用机器自己的 modem 分区）、Wi-Fi、蓝牙、耳机和喇叭。TFA9887 的 `libtfa9887` 与 acdb 来自现有专有文件。GPS 的旧 loc_api 树体积很大，Android 11 上改为使用捐赠树的 HIDL gnss，只保留 sambar 的 `gps.conf` 一类配置。
+格力阶段 3 把「能进桌面」从收口标准里拿掉，改成一套可以天天用的系统，然后才谈下一版 Android。这边同样。阶段 0 探到的硬件都进下表。表里没有的 NFC、红外、FM 不排：`ueventd.qcom.rc` 里的 `nfc-nci` 是高通模板，阶段 0 没有对应的输入设备或芯片。定位用捐赠树的 HIDL gnss，只留 sambar 的 `gps.conf`。阶段 0 没有定位成功的记录，蜂窝通了再看，不单独挡住。
 
-### 阶段 3：相机、指纹、传感器
+完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 3 项触控和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
 
-相机从现有 QCamera2 和 `imx230` / `ov8865` 的 blob 接起。Android 11 可以暂时维持 HAL1 / 包装后的 Camera1，一加 2 的 18.1 就是这么做的。指纹保持 Silead 的 `fpsvcd` 用户态，不换成一加 2 的方案。persist 里的校准在刷机时保留。
+启动链分区、modem、bluetooth、modemst1、modemst2、fsg、persist、persistbak、config 继续不写。不跑 `oem unlock`。不用一加 2 的 system、vendor 或固件镜像。一加 2 只提供 SoC 级的 HAL 结构。
 
-### 阶段 4：视镜像大小决定要不要上 Android 12.1 或 13
+#### 开始前先清 userdata
+
+用户确认这块盘上没有要留的文件。CM13 的应用数据在 Android 11 上会闪退，留着只会干扰后面的验收。`/data/adb` 已有 `device-backup/data-adb.tar`（Magisk 27）。清掉之后没有那份 root。18.1 是 userdebug，root 走开发者选项里的 Rooted debugging。
+
+只格式化 `mmcblk0p39`。用现在这份能挂上 f2fs 的 recovery（内核 `#16`）在分区上做 `mkfs.f2fs`。不用 `fastboot -w`：这颗 LK 的 format 不保证还是 f2fs，fstab 写的是 f2fs。`fstab.qcom` 的 userdata 只有 `formattable`，没有 `forceencrypt`，也没有 `fileencryption`。新盘不会进 CryptKeeper。格力那次会，是因为 userdata 带加密 footer。
+
+清完第一次开机走设置向导。Gatekeeper 装上之前不要设锁屏密码。阶段 1 的图案就是旧 Gatekeeper 的句柄，新系统校验不过。
+
+#### 阶段 0 的硬件落到哪一项
+
+| 阶段 0 看到的 | 阶段 2 |
+| --- | --- |
+| Sharp 双 DSI command mode，1440x2560，dpi 560 | 第 1 项。已通过 |
+| Adreno 430，`ro.opengles.version=196609`（OpenGL ES 3.1） | 第 1 项。已通过，GLES 是 Adreno 430 |
+| Atmel `atmel_mxt_ts_T100_touchscreen`，固件 `A4_15_2.2_AA.fw` | 第 3 项。用户确认已经能用 |
+| 声卡 `msm8994-tomtom-mtp-snd-card`（WCD9330），功放 NXP TFA9887 | 第 6 项。`libtfa9887` 和 acdb 用现有专有文件 |
+| Wi-Fi 模块 `wlan.ko` | 第 5 项。继续编成模块 |
+| 蓝牙 QCA Rome，固件分区 `mmcblk0p12`（1 MiB，df 显示的 1.0G 是错的） | 第 7 项 |
+| ST LSM6DS3 加速度计和陀螺仪，`yas537_mag`，`alps_pressure`，光感，距离，霍尔 | 第 8 项。不刷 persist |
+| modem 分区 80 MiB，modemst1 / modemst2 / fsg 各 4 MiB | 第 9 项。继续用这台机器自己的分区 |
+| 相机 `imx230` 与 `ov8865`，`BOARD_QTI_CAMERA_32BIT_ONLY`，`persist.camera.HAL3.enabled=0` | 第 12 项。维持 HAL1 |
+| Silead，`silead-vinput-keypad`，`fingerprintd` 与 `fpsvcd` | 第 13 项。不换成一加 2 的指纹 |
+| USB 在 Android 里是 `2a96:3014`，bootloader 是 `2a96:301c` | 第 4 项 |
+| eMMC，无 A/B，无 vendor 分区 | 不单列。system 仍是 3 GiB |
+
+阶段 0 的表没有单独写振动马达。阶段 1 为了让 `system_server` 过阶段 480，已经装了 `vibrator.default`。用户确认马达是好的，第 10 项已通过。也没有实体导航键：`gpio-keys.kl` 只有音量加，`qpnp_pon.kl` 只有电源和音量减。虚拟导航键和全面屏手势是第 2 项，硬件加速之后先做。编解码不是阶段 0 的探针。格力把它算进日用收口，这边放在第 11 项。
+
+#### 验收顺序
+
+1. 显示能看。已通过。Adreno 430，OpenGL ES 3.1，桌面没有横条，背光能灭能亮。记录在 `docs/sambar-phase-2.md`。
+2. 系统导航。三键导航栏和全面屏手势都要能用：返回、回桌面、最近任务。这台手机没有实体导航键，后面的测试靠这个。硬件加速通过之后先做这项。
+3. 触控。已通过。用户确认能用。固件仍是 `A4_15_2.2_AA.fw`。清盘或换 GPU 之后如果触摸没了，再回到这项。
+4. USB。文件传输两个方向都能拷文件。充电、MTP、PTP 能切换。现在 `init.sambar.rc` 把 `sys.usb.config` 钉成 `adb`，这只是阶段 1 的调试口。这颗内核是传统 `android_usb`，不是 ConfigFS。adb 继续用阻塞读写（`ro.adb.nonblocking_ffs=0`，`sys.usb.ffs.aio_compat=true`）。插了 U 盘时按 fstab 的 `usbdisk` 挂上；阶段 0 没有插过 U 盘，挂不上不挡这一项。
+5. Wi-Fi。`wlan.ko` 加载，固件来自这台机器，能扫描、连接、拿到地址，`ping` 通。supplicant 用 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。
+6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。
+7. 蓝牙。开关、扫描、配对、A2DP 播放。固件读 `mmcblk0p12`，不另刷这个分区。耳机上的通话留到收口之后。
+8. 传感器。加速度计、陀螺仪、磁力计、气压、光感、距离、霍尔都有事件。persist 里的校准不动。
+9. 蜂窝。第一张卡识别、驻网、数据能上网，听筒和免提各打通一次。RIL 用这台机器的 modem 分区和现有 blob，不换一加 2 的。短信要能收发。第二张卡和 VoLTE 不挡。阶段 0 没有读卡槽数量。
+10. 振动。已通过。用户确认马达是好的。
+11. 硬件编解码。视频能播能录一段，音频解码不走软解兜底。Venus 和 ADSP 用现有固件路径。编解码进程崩溃先修这个，再进相机。
+12. 相机。后摄 `imx230`、前摄 `ov8865` 都能预览、拍照、录短视频。32 位 HAL1，不在这一阶段打开 HAL3。
+13. 指纹。先有 Gatekeeper，再录入一枚，锁屏能解开，另一根手指被拒绝。用户态继续是 Silead 的 `fpsvcd`，校准留在 persist。没有 Gatekeeper 时不要设密码。
+14. 休眠唤醒再确认一次。第 1 项的电源键之后，Wi-Fi、蜂窝和传感器都开着时再睡一次、再亮一次。背光必须灭。阶段 1 里 `cont_splash` 期间 `lcd-backlight` 不写硬件，电流在 WLED 上。
+
+#### 不挡住这次收口
+
+日用的 14 项过了之后，到一套可以交给别人刷的包为止，按这个顺序。格力阶段 3 的「距离成品 ROM」是同一张单子，去掉这台机器没有的红外、FM、NFC。
+
+1. 通话能听清。听筒和免提先响了再收，回声消除和降噪可以后补。
+2. 蓝牙耳机上的通话。
+3. 第二张卡和 VoLTE。第一张卡的短信、数据和普通通话已经在第 9 项里。
+4. 定位。gnss HIDL，配置只用 sambar 的 `gps.conf`。不把 CM13 的 `loc_api` 整棵树搬进 18.1。
+5. 可刷的安装包。只含 boot 和 system。recovery 不放进同一包，除非下面一项已经能刷它。
+6. 能挂这块 f2fs、也能刷 system-as-root 包的 recovery。现在的 TWRP 2.8.7 能挂 `/data`，不保证能刷 18.1 的包。换 recovery 之前，现在这份镜像留在 `device-backup/` 的恢复路径上。
+7. 加密。这次不做。fstab 不写 `fileencryption`。3.10 上的文件加密单独开一轮，不和清盘绑在一起。
+8. SELinux enforcing。放在最后。每加一个 HAL 都会多一批 denial，现在切只会反复改策略。
+
+### 阶段 3：视镜像大小决定要不要上 Android 12.1 或 13
 
 18.1 的日常功能齐了之后，用一加 2 的 19.1 和 20 树评估下一级。先量 system 镜像。放得进 3 GiB 再做。放不进就停在 18.1，或者单独开一轮 GPT 调整，不把扩容和升级绑在同一次刷写里。这一级预期 SELinux 会停留在 permissive，和捐赠 ROM 的公开状态一致。
 
@@ -175,7 +232,7 @@ Android 14、15、16、17 不排进这条路线。出现一份别人维护到那
 
 ## 路线图初稿时没有做的事
 
-下面三条是 2026-10-29 写这份路线图时的状态，不是现在的状态。阶段 1 开始之后，recovery 已换成内核 `#16`，设备分支 `lineage-18.1` 已建。当前进度以 `docs/sambar-phase-1.md` 为准。
+下面三条是 2026-10-29 写这份路线图时的状态，不是现在的状态。阶段 1 已经完成，recovery 是内核 `#16`，设备分支 `lineage-18.1` 已建。下一步是阶段 2，步骤记在 `docs/sambar-phase-2.md`。
 
 - 没有刷 recovery，没有 `oem unlock`。bootloader 已经是 unlocked
 - 没有把 cm-13.0 挪到新分支。板级档案留在原分支，移植分支等阶段 1 再开

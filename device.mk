@@ -83,10 +83,11 @@ PRODUCT_PACKAGES += \
     liboverlay \
     libtinyxml
 
-# Android 6 Adreno userspace. Kept on the image, but not selected.
-# libEGL_adreno.so loads, then eglInitialize fails and SurfaceFlinger
-# aborts in eglQueryStringImplementationANDROID. SwiftShader does not
-# need the kgsl firmware loader. The filename is libEGL_${ro.hardware.egl}.so.
+# Android 6 Adreno userspace from this phone. The filename is
+# libEGL_${ro.hardware.egl}.so. eglInitialize used to fail while
+# /dev/kgsl-3d0 was 0600 root; ueventd now opens it, and the kernel
+# loads a420_pm4.fw / a420_pfp.fw from /vendor/firmware. SwiftShader
+# stays installed so the property can be switched back.
 SAMBAR_BLOB_VENDOR := /run/media/alpha/YMTC/sambar/blobs/system/vendor
 PRODUCT_COPY_FILES += \
     $(SAMBAR_BLOB_VENDOR)/lib/egl/libEGL_adreno.so:$(TARGET_COPY_OUT_VENDOR)/lib/egl/libEGL_adreno.so \
@@ -112,7 +113,7 @@ PRODUCT_PACKAGES += \
     libGLESv2_swiftshader
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.hardware.egl=swiftshader \
+    ro.hardware.egl=adreno \
     ro.surface_flinger.has_wide_color_display=false \
     ro.surface_flinger.has_HDR_display=false \
     debug.sf.nobootanimation=1

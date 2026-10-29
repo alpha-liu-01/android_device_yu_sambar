@@ -491,6 +491,14 @@ symlink /dev/block/platform/soc.0/${ro.boot.bootdevice} /dev/block/bootdevice
 
 开机后大约 10 秒 adb 就是 `device`，不用再进 recovery 取日志。`sys.boot_completed=1`。`/dev/ion` 是 `0664 system system`，`/dev/kgsl-3d0` 是 `0666 system system`，日志里没有分配失败。SurfaceFlinger 用 HWC overlay 合成三层，`powerMode=On`。面板 9.3 秒解除 blank。抓图时手机已按 30 秒超时睡下，`lcd-backlight` 和 `wled` 都是 0。用 adb 写了 `stay_on_while_plugged_in 7` 和 `screen_off_timeout 1800000`，再发 `KEYCODE_WAKEUP`，读回 `lcd-backlight` 102、`wled` 1638，灯 HAL 在工作。截图是锁屏，「没有通知」。第一次截图里有人画过两个点，提示「图案错误」，触控进了框架。壁纸上有横向黑色扫描线，SurfaceFlinger 的截图里就有，不是面板问题。gralloc 打 `AdrenoUtils: Unknown Chip ID 0`，对齐可能和 SwiftShader 不一致，还没查。现场记录在 `phase1/live-step8p/`。
 
+## 去掉锁屏
+
+2026-10-29 锁屏是 CM13 留下的图案。`dumpsys lock_settings` 里用户 0 的类型是 Pattern，质量 65536，`SP Handle` 是 0，最后修改时间是 0。`/data/system/gatekeeper.pattern.key` 58 字节，`gatekeeper.password.key` 是空文件，没有 `spblob`。`ro.crypto.state` 是 `unsupported`。这份 18.1 没有对应的 Gatekeeper，旧图案校验不过。内部存储当时已挂上，`/storage/emulated/0` 约 2.6 GB，`DCIM` 约 367 MB。没有格式化 userdata。
+
+Android 里的 adb 不是 root。重启进 recovery 后只删了三个文件：`/data/system/locksettings.db`、`gatekeeper.pattern.key`、`gatekeeper.password.key`。`/data/media/0/DCIM` 还在，`/data` 仍是 24.6 GB 的 f2fs，已用 3.4 GB。然后重启回 Android。
+
+开机后凭证类型是 None，质量 0。滑开之后 `isKeyguardShowing=false`，焦点是 Launcher3。应用列表里有拨打电话、短信、AudioFX、计算器。壁纸上的横条还在。
+
 ## 事件
 
 - 2026-10-29：阶段 0 已完成，手机在 Android 6 的非官方 Lineage 13 上。本文写好时，`lineage-18.1` 分支还没建，捐赠内核还没克隆进 `sambar/donor/`。
@@ -524,3 +532,4 @@ symlink /dev/block/platform/soc.0/${ro.boot.bootdevice} /dev/block/bootdevice
 - 2026-10-29：按去掉 LiveDisplay 三项之后的源码重新打包。system SHA256 `5d9ec32432c9153415e4780cd81a6ddadae2f201d740b86f97a1864450304848`。只刷了 system，重启一次。细节在「LiveDisplay」。
 - 2026-10-29：仍是 YU 标志，但 `BOOT_COMPLETED` 已经广播，背光基本是关的。打开持久 logcat，加开机后常亮。system SHA256 `e65453ecae5632ef32df127dd839ad8aa41c092025c0e789a418c4752a2cc9fd`。只刷了 system，重启一次。adb 是 `offline`，手机后来自己硬复位。细节在「持久日志和 adb」。
 - 2026-10-29：持久日志显示图形分配器打不开 `/dev/ion` 和 `/dev/kgsl-3d0`，因为没装 vendor 的 ueventd 规则。adbd 因为 f_fs 没有 AIO 一直掉线。装上 `ueventd.qcom.rc`，adb 改用阻塞读写。system SHA256 `35b42a50154cd6b995ee5bf089c9302dfcbec735746edd7f467fd5be859ee75e`。只刷了 system，重启一次。adb 能进，Android 11 显示锁屏，触控有反应。细节在「持久日志和 adb」。
+- 2026-10-29：在 recovery 里删了 `locksettings.db` 和两个 `gatekeeper.*.key`。没有格式化 userdata，`DCIM` 还在。重启后锁屏凭证是 None，Launcher3 到了前台。细节在「去掉锁屏」。
