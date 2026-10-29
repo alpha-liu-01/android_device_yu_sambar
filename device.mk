@@ -1,11 +1,12 @@
 #
 # Copyright (C) 2015 The CyanogenMod Project
+# Copyright (C) 2017 The LineageOS Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,302 +14,137 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-$(call inherit-product-if-exists, vendor/yu/sambar/sambar-vendor.mk)
 
-# Overlay
-DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
+# Phase 1 skeleton: panel, touch keymaps, fstab, lights.
+# Fingerprint, doze, IMS, camera and RIL stay out until a later phase.
 
-# Permissions
-PRODUCT_COPY_FILES += \
-    frameworks/native/data/etc/android.hardware.audio.low_latency.xml:system/etc/permissions/android.hardware.audio.low_latency.xml \
-    frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
-    frameworks/native/data/etc/android.hardware.bluetooth_le.xml:system/etc/permissions/android.hardware.bluetooth_le.xml \
-    frameworks/native/data/etc/android.hardware.camera.flash-autofocus.xml:system/etc/permissions/android.hardware.camera.flash-autofocus.xml \
-    frameworks/native/data/etc/android.hardware.camera.front.xml:system/etc/permissions/android.hardware.camera.front.xml \
-    frameworks/native/data/etc/android.hardware.location.gps.xml:system/etc/permissions/android.hardware.location.gps.xml \
-    frameworks/native/data/etc/android.hardware.sensor.accelerometer.xml:system/etc/permissions/android.hardware.sensor.accelerometer.xml \
-    frameworks/native/data/etc/android.hardware.sensor.barometer.xml:system/etc/permissions/android.hardware.sensor.barometer.xml \
-    frameworks/native/data/etc/android.hardware.sensor.compass.xml:system/etc/permissions/android.hardware.sensor.compass.xml \
-    frameworks/native/data/etc/android.hardware.sensor.gyroscope.xml:system/etc/permissions/android.hardware.sensor.gyroscope.xml \
-    frameworks/native/data/etc/android.hardware.sensor.light.xml:system/etc/permissions/android.hardware.sensor.light.xml \
-    frameworks/native/data/etc/android.hardware.sensor.proximity.xml:system/etc/permissions/android.hardware.sensor.proximity.xml \
-    frameworks/native/data/etc/android.hardware.telephony.gsm.xml:system/etc/permissions/android.hardware.telephony.gsm.xml \
-    frameworks/native/data/etc/android.hardware.telephony.cdma.xml:system/etc/permissions/android.hardware.telephony.cdma.xml \
-    frameworks/native/data/etc/android.hardware.touchscreen.multitouch.jazzhand.xml:system/etc/permissions/android.hardware.touchscreen.multitouch.jazzhand.xml \
-    frameworks/native/data/etc/android.hardware.usb.accessory.xml:system/etc/permissions/android.hardware.usb.accessory.xml \
-    frameworks/native/data/etc/android.hardware.usb.host.xml:system/etc/permissions/android.hardware.usb.host.xml \
-    frameworks/native/data/etc/android.hardware.wifi.direct.xml:system/etc/permissions/android.hardware.wifi.direct.xml \
-    frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
-    frameworks/native/data/etc/android.software.midi.xml:system/etc/permissions/android.software.midi.xml \
-    frameworks/native/data/etc/android.software.sip.voip.xml:system/etc/permissions/android.software.sip.voip.xml \
-    frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml
+LOCAL_PATH := device/yu/sambar
 
-# Screen density
-PRODUCT_AAPT_CONFIG := normal hdpi xhdpi xxhdpi xxxhdpi
-PRODUCT_AAPT_PREF_CONFIG := xxxhdpi
+PRODUCT_SOONG_NAMESPACES += \
+    device/yu/sambar
 
-# Boot animation
+PRODUCT_CHARACTERISTICS := nosdcard
+
+# 1440x2560, 560 dpi
 TARGET_SCREEN_HEIGHT := 2560
 TARGET_SCREEN_WIDTH := 1440
-
-$(call inherit-product, frameworks/native/build/phone-xxxhdpi-3072-dalvik-heap.mk)
-$(call inherit-product, frameworks/native/build/phone-xxxhdpi-3072-hwui-memory.mk)
-
-# Audio
-PRODUCT_PACKAGES += \
-    audiod \
-    audio.a2dp.default \
-    audio.primary.msm8994 \
-    audio.r_submix.default \
-    audio.usb.default \
-    audio_amplifier.msm8994 \
-    libtfa9887 \
-    libqcompostprocbundle \
-    libqcomvisualizer \
-    libqcomvoiceprocessing \
-    tinymix
-
-# Audio amp configuration
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/audio/tfa9887.cnt:system/etc/tfa9887.cnt
-
-# Audio configuration
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/audio/acdb/Bluetooth_cal.acdb:system/etc/acdbdata/MTP/MTP_Bluetooth_cal.acdb \
-    $(LOCAL_PATH)/audio/acdb/General_cal.acdb:system/etc/acdbdata/MTP/MTP_General_cal.acdb \
-    $(LOCAL_PATH)/audio/acdb/Global_cal.acdb:system/etc/acdbdata/MTP/MTP_Global_cal.acdb \
-    $(LOCAL_PATH)/audio/acdb/Handset_cal.acdb:system/etc/acdbdata/MTP/MTP_Handset_cal.acdb \
-    $(LOCAL_PATH)/audio/acdb/Hdmi_cal.acdb:system/etc/acdbdata/MTP/MTP_Hdmi_cal.acdb \
-    $(LOCAL_PATH)/audio/acdb/Headset_cal.acdb:system/etc/acdbdata/MTP/MTP_Headset_cal.acdb \
-    $(LOCAL_PATH)/audio/acdb/Speaker_cal.acdb:system/etc/acdbdata/MTP/MTP_Speaker_cal.acdb \
-    $(LOCAL_PATH)/audio/audio_platform_info.xml:system/etc/audio_platform_info.xml \
-    $(LOCAL_PATH)/audio/audio_policy.conf:system/etc/audio_policy.conf \
-    $(LOCAL_PATH)/audio/audio_output_policy.conf:system/vendor/etc/audio_output_policy.conf \
-    $(LOCAL_PATH)/audio/mixer_paths.xml:system/etc/mixer_paths.xml \
-    $(LOCAL_PATH)/audio/srs_processing.cfg:system/etc/srs/srs_processing.cfg \
-    $(LOCAL_PATH)/audio/audio_effects.conf:system/vendor/etc/audio_effects.conf
-
-# ANT+
-PRODUCT_PACKAGES += \
-    AntHalService \
-    com.dsi.ant.antradio_library \
-    libantradio
-
-# Browser
-PRODUCT_PACKAGES += \
-    Gello
-
-# Camera
-PRODUCT_PACKAGES += \
-    camera.msm8994 \
-    libmm-qcamera \
-    Snap
-
-# Charger
-PRODUCT_PACKAGES += \
-    charger_res_images
-
-# Connectivity Engine support (CNE)
-PRODUCT_PACKAGES += \
-    CNEService \
-    cneapiclient \
-    com.quicinc.cne \
-    libcnefeatureconfig \
-    services-ext
-
-# CRDA
-PRODUCT_PACKAGES += \
-    crda \
-    linville.key.pub.pem \
-    regdbdump \
-    regulatory.bin
-
-# DataServices
-PRODUCT_PACKAGES += \
-    librmnetctl
-
-# Display
-PRODUCT_PACKAGES += \
-    copybit.msm8994 \
-    gralloc.msm8994 \
-    hwcomposer.msm8994 \
-    libtinyxml \
-    memtrack.msm8994
-
-PRODUCT_PROPERTY_OVERRIDES += \
-    dalvik.vm.heapgrowthlimit=256m
-
-PRODUCT_PACKAGES += \
-    fingerprint.msm8994 \
-    fingerprintd
-
-# DPM
-PRODUCT_PACKAGES += \
-    com.qti.dpmframework \
-    dpmapi
-
-# FM
-PRODUCT_PACKAGES += \
-    FM2 \
-    libqcomfm_jni \
-    qcom.fmradio
-
-# GPS
-PRODUCT_PACKAGES += \
-    gps.msm8994
+PRODUCT_AAPT_CONFIG := normal
+PRODUCT_AAPT_PREF_CONFIG := xxxhdpi
 
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/gps/flp.conf:system/etc/flp.conf \
-    $(LOCAL_PATH)/gps/gps.conf:system/etc/gps.conf \
-    $(LOCAL_PATH)/gps/izat.conf:system/etc/izat.conf \
-    $(LOCAL_PATH)/gps/quipc.conf:system/etc/quipc.conf \
-    $(LOCAL_PATH)/gps/sap.conf:system/etc/sap.conf
+    frameworks/native/data/etc/android.hardware.opengles.aep.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.opengles.aep.xml \
+    frameworks/native/data/etc/android.hardware.touchscreen.multitouch.jazzhand.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.touchscreen.multitouch.jazzhand.xml \
+    frameworks/native/data/etc/android.hardware.usb.accessory.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.usb.accessory.xml \
+    frameworks/native/data/etc/android.hardware.usb.host.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.usb.host.xml \
+    frameworks/native/data/etc/android.hardware.wifi.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.wifi.xml \
+    frameworks/native/data/etc/handheld_core_hardware.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/handheld_core_hardware.xml
 
-# irqbalance
+# Keymaps from the cm-13.0 tree. Not the OnePlus touch panel layout.
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/msm_irqbalance.conf:system/vendor/etc/msm_irqbalance.conf
+    $(LOCAL_PATH)/keylayout/gpio-keys.kl:$(TARGET_COPY_OUT_VENDOR)/usr/keylayout/gpio-keys.kl \
+    $(LOCAL_PATH)/keylayout/qpnp_pon.kl:$(TARGET_COPY_OUT_VENDOR)/usr/keylayout/qpnp_pon.kl \
+    $(LOCAL_PATH)/keylayout/silead-vinput-keypad.kl:$(TARGET_COPY_OUT_VENDOR)/usr/keylayout/silead-vinput-keypad.kl
 
-# IRSC
+# Audio XML is present for later phases. Phase 1 does not require sound.
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/sec_config:system/etc/sec_config
-
-# Keyhandler/Gestures
-PRODUCT_PACKAGES += \
-    com.cyanogenmod.keyhandler \
-    ConfigPanel
-
-PRODUCT_SYSTEM_SERVER_JARS += com.cyanogenmod.keyhandler
-
-# never dexopt the keyhandler
-$(call add-product-dex-preopt-module-config,com.cyanogenmod.keyhandler,disable)
-
-# Keylayout
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/keylayout/gpio-keys.kl:system/usr/keylayout/gpio-keys.kl \
-    $(LOCAL_PATH)/keylayout/qpnp_pon.kl:system/usr/keylayout/qpnp_pon.kl \
-    $(LOCAL_PATH)/keylayout/silead-vinput-keypad.kl:system/usr/keylayout/silead-vinput-keypad.kl \
-    $(LOCAL_PATH)/keylayout/silead-vinput-keypad.kcm:system/usr/keychars/silead-vinput-keypad.kcm
-
-# Keystore
-PRODUCT_PACKAGES += \
-    keystore.msm8994
-
-PRODUCT_PACKAGES += \
-    lights.msm8994
-
-# Media
-PRODUCT_COPY_FILES += \
-    frameworks/av/media/libstagefright/data/media_codecs_google_audio.xml:system/etc/media_codecs_google_audio.xml \
-    frameworks/av/media/libstagefright/data/media_codecs_google_telephony.xml:system/etc/media_codecs_google_telephony.xml \
-    frameworks/av/media/libstagefright/data/media_codecs_google_video.xml:system/etc/media_codecs_google_video.xml \
-    $(LOCAL_PATH)/configs/media_codecs.xml:system/etc/media_codecs.xml \
-    $(LOCAL_PATH)/configs/media_codecs_performance.xml:system/etc/media_codecs_performance.xml \
-    $(LOCAL_PATH)/configs/media_profiles.xml:system/etc/media_profiles.xml
-
-PRODUCT_PACKAGES += \
-    libdashplayer \
-    libOmxAacEnc \
-    libOmxAmrEnc \
-    libOmxCore \
-    libOmxEvrcEnc \
-    libOmxQcelp13Enc \
-    libOmxVdec \
-    libOmxVenc \
-    libstagefrighthw
-#    qcmediaplayer
-
-#PRODUCT_BOOT_JARS += \
-#    qcmediaplayer
-
-# Power HAL
-PRODUCT_PACKAGES += \
-    power.msm8994
-
-# QC PROPRIETARY
-#ifneq ($(QCPATH),)
-# proprietary wifi display, if available
-#PRODUCT_BOOT_JARS += WfdCommon
-#endif
-
-# Ramdisk
-PRODUCT_PACKAGES += \
-    init.qcom.early_boot.sh \
-    init.crda.sh \
-    init.qcom.bt.sh \
-    init.qcom.coex.sh \
-    init.qcom.fm.sh \
-    init.qcom.post_boot.sh
+    $(LOCAL_PATH)/audio/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
+    $(LOCAL_PATH)/audio/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+    $(LOCAL_PATH)/audio/audio_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy.conf \
+    $(LOCAL_PATH)/audio/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml
 
 PRODUCT_PACKAGES += \
     fstab.qcom \
-    init.qcom.rc \
-    init.qcom.usb.rc \
-    init.recovery.qcom.rc \
-    ueventd.qcom.rc
+    fstab.qcom_ramdisk
 
-ifeq ($(TARGET_BUILD_VARIANT),user)
-PRODUCT_PACKAGES += \
-    init.qcom.ssr.rc
-endif
-
-# RIL
-PRODUCT_PACKAGES += \
-    libxml2
-
-# Sensors
-PRODUCT_PACKAGES += \
-    pl_sensor_cal \
-    sensors.msm8994
-
-# Thermal
+# Second-stage init looks for /init.${ro.hardware}.rc on the system image.
+# The boot ramdisk is freed after the system partition becomes /.
+# host_init_verifier will not open this through the device-tree symlink.
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/thermal-engine.conf:system/etc/thermal-engine.conf
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/rootdir/etc/init.sambar.rc:$(TARGET_COPY_OUT_ROOT)/init.qcom.rc
 
-# USB
+# Without these rules /dev/ion and /dev/kgsl-3d0 stay 0600 root, and the
+# graphics allocator cannot allocate any buffer.
+PRODUCT_COPY_FILES += \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/rootdir/etc/ueventd.qcom.rc:$(TARGET_COPY_OUT_VENDOR)/ueventd.rc
+
+# Display
 PRODUCT_PACKAGES += \
-    com.android.future.usb.accessory
+    android.hardware.graphics.allocator@2.0-impl \
+    android.hardware.graphics.allocator@2.0-service \
+    android.hardware.graphics.composer@2.1-impl \
+    android.hardware.graphics.composer@2.1-service \
+    android.hardware.graphics.mapper@2.0-impl-2.1 \
+    android.hardware.memtrack@1.0-impl \
+    android.hardware.memtrack@1.0-service \
+    copybit.msm8994 \
+    gralloc.msm8994 \
+    hwcomposer.msm8994 \
+    memtrack.msm8994 \
+    liboverlay \
+    libtinyxml
 
-# Wifi
+# Android 6 Adreno userspace. Kept on the image, but not selected.
+# libEGL_adreno.so loads, then eglInitialize fails and SurfaceFlinger
+# aborts in eglQueryStringImplementationANDROID. SwiftShader does not
+# need the kgsl firmware loader. The filename is libEGL_${ro.hardware.egl}.so.
+SAMBAR_BLOB_VENDOR := /run/media/alpha/YMTC/sambar/blobs/system/vendor
+PRODUCT_COPY_FILES += \
+    $(SAMBAR_BLOB_VENDOR)/lib/egl/libEGL_adreno.so:$(TARGET_COPY_OUT_VENDOR)/lib/egl/libEGL_adreno.so \
+    $(SAMBAR_BLOB_VENDOR)/lib/egl/libGLESv1_CM_adreno.so:$(TARGET_COPY_OUT_VENDOR)/lib/egl/libGLESv1_CM_adreno.so \
+    $(SAMBAR_BLOB_VENDOR)/lib/egl/libGLESv2_adreno.so:$(TARGET_COPY_OUT_VENDOR)/lib/egl/libGLESv2_adreno.so \
+    $(SAMBAR_BLOB_VENDOR)/lib/egl/eglSubDriverAndroid.so:$(TARGET_COPY_OUT_VENDOR)/lib/egl/eglSubDriverAndroid.so \
+    $(SAMBAR_BLOB_VENDOR)/lib/libadreno_utils.so:$(TARGET_COPY_OUT_VENDOR)/lib/libadreno_utils.so \
+    $(SAMBAR_BLOB_VENDOR)/lib/libgsl.so:$(TARGET_COPY_OUT_VENDOR)/lib/libgsl.so \
+    $(SAMBAR_BLOB_VENDOR)/lib/libllvm-glnext.so:$(TARGET_COPY_OUT_VENDOR)/lib/libllvm-glnext.so \
+    $(SAMBAR_BLOB_VENDOR)/lib64/egl/libEGL_adreno.so:$(TARGET_COPY_OUT_VENDOR)/lib64/egl/libEGL_adreno.so \
+    $(SAMBAR_BLOB_VENDOR)/lib64/egl/libGLESv1_CM_adreno.so:$(TARGET_COPY_OUT_VENDOR)/lib64/egl/libGLESv1_CM_adreno.so \
+    $(SAMBAR_BLOB_VENDOR)/lib64/egl/libGLESv2_adreno.so:$(TARGET_COPY_OUT_VENDOR)/lib64/egl/libGLESv2_adreno.so \
+    $(SAMBAR_BLOB_VENDOR)/lib64/egl/eglSubDriverAndroid.so:$(TARGET_COPY_OUT_VENDOR)/lib64/egl/eglSubDriverAndroid.so \
+    $(SAMBAR_BLOB_VENDOR)/lib64/libadreno_utils.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libadreno_utils.so \
+    $(SAMBAR_BLOB_VENDOR)/lib64/libgsl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libgsl.so \
+    $(SAMBAR_BLOB_VENDOR)/lib64/libllvm-glnext.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libllvm-glnext.so \
+    /run/media/alpha/YMTC/sambar/blobs/system/etc/firmware/a420_pfp.fw:$(TARGET_COPY_OUT_VENDOR)/firmware/a420_pfp.fw \
+    /run/media/alpha/YMTC/sambar/blobs/system/etc/firmware/a420_pm4.fw:$(TARGET_COPY_OUT_VENDOR)/firmware/a420_pm4.fw
+
 PRODUCT_PACKAGES += \
-    ipacm \
-    ipacm-diag \
-    IPACM_cfg.xml \
-    libqsap_sdk \
-    libQWiFiSoftApCfg \
-    libwpa_client \
-    hostapd \
-    dhcpcd.conf \
-    wpa_supplicant \
-    wpa_supplicant.conf
+    libEGL_swiftshader \
+    libGLESv1_CM_swiftshader \
+    libGLESv2_swiftshader
 
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/hostapd.accept:system/etc/hostapd/hostapd.accept \
-    $(LOCAL_PATH)/configs/hostapd.conf:system/etc/hostapd/hostapd_default.conf \
-    $(LOCAL_PATH)/configs/hostapd.deny:system/etc/hostapd/hostapd.deny \
-    $(LOCAL_PATH)/configs/p2p_supplicant_overlay.conf:system/etc/wifi/p2p_supplicant_overlay.conf \
-    $(LOCAL_PATH)/configs/wpa_supplicant.conf:system/etc/wifi/wpa_supplicant.conf \
-    $(LOCAL_PATH)/configs/wpa_supplicant_overlay.conf:system/etc/wifi/wpa_supplicant_overlay.conf
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.hardware.egl=swiftshader \
+    ro.surface_flinger.has_wide_color_display=false \
+    ro.surface_flinger.has_HDR_display=false \
+    debug.sf.nobootanimation=1
 
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/wifi/WCNSS_qcom_cfg.ini:system/etc/wifi/WCNSS_qcom_cfg.ini \
-    $(LOCAL_PATH)/wifi/WCNSS_cfg.dat:system/etc/firmware/wlan/qca_cld/WCNSS_cfg.dat \
-    $(LOCAL_PATH)/wifi/WCNSS_qcom_wlan_nv.bin:system/etc/firmware/wlan/qca_cld/WCNSS_qcom_wlan_nv.bin
+# system_server blocks in VibratorService.vibratorInit until
+# IVibrator/default registers. The legacy module is already
+# vibrator.default, which writes the timed_output sysfs node.
+PRODUCT_PACKAGES += \
+    android.hardware.vibrator@1.0-impl \
+    android.hardware.vibrator@1.0-service \
+    vibrator.default
 
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/silead/log_cfg.xml:system/etc/silead/log_cfg.xml \
-    $(LOCAL_PATH)/configs/silead/board_for_gsl6163a/silead_config.xml:system/etc/silead/sysparms/board_for_gsl6163a/silead_config.xml \
-    $(LOCAL_PATH)/configs/silead/board_for_gsl6163a/silead_param.xml:system/etc/silead/sysparms/board_for_gsl6163a/silead_param.xml \
-    $(LOCAL_PATH)/configs/silead/board_for_gsl6163b00/silead_config.xml:system/etc/silead/sysparms/board_for_gsl6163b00/silead_config.xml \
-    $(LOCAL_PATH)/configs/silead/board_for_gsl6163b00/silead_param.xml:system/etc/silead/sysparms/board_for_gsl6163b00/silead_param.xml \
-    $(LOCAL_PATH)/configs/silead/board_for_gsl6163b01/silead_config.xml:system/etc/silead/sysparms/board_for_gsl6163b01/silead_config.xml \
-    $(LOCAL_PATH)/configs/silead/board_for_gsl6163b01/silead_param.xml:system/etc/silead/sysparms/board_for_gsl6163b01/silead_param.xml \
-    $(LOCAL_PATH)/configs/silead/board_for_gsl6163b02/silead_config.xml:system/etc/silead/sysparms/board_for_gsl6163b02/silead_config.xml \
-    $(LOCAL_PATH)/configs/silead/board_for_gsl6163b02/silead_param.xml:system/etc/silead/sysparms/board_for_gsl6163b02/silead_param.xml
+# audioserver does not publish media.audio_policy until IDevicesFactory
+# getService() returns. That call waits forever while the HAL is declared
+# and no process has registered it, and AudioService then waits forever
+# on the policy service. The default primary module is already installed.
+PRODUCT_PACKAGES += \
+    android.hardware.audio@2.0-service \
+    android.hardware.audio@2.0-impl \
+    android.hardware.audio.effect@2.0-impl \
+    android.hardware.keymaster@4.0-service \
+    android.hardware.soundtrigger@2.0-impl
 
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/perf-profile0.conf:system/vendor/etc/perf-profile0.conf \
-    $(LOCAL_PATH)/configs/perf-profile1.conf:system/vendor/etc/perf-profile1.conf \
-    $(LOCAL_PATH)/configs/perf-profile2.conf:system/vendor/etc/perf-profile2.conf \
-    $(LOCAL_PATH)/configs/perf-profile3.conf:system/vendor/etc/perf-profile3.conf \
-    $(LOCAL_PATH)/configs/perf-profile4.conf:system/vendor/etc/perf-profile4.conf \
-    $(LOCAL_PATH)/configs/perf-profile5.conf:system/vendor/etc/perf-profile5.conf
+# The 2.1 service is already in the image and aborts without this impl.
+PRODUCT_PACKAGES += \
+    android.hardware.health@2.1-impl
+
+# Lights HAL from hardware/qcom-caf/msm8994. The CM13 lights.c stays in
+# liblight/ and is built only if BOARD_USE_SAMBAR_LIBLIGHT is set.
+# DisplayManagerService waits on ILight while holding its lock. Without
+# the HIDL service, system_server never leaves bootstrap.
+PRODUCT_PACKAGES += \
+    android.hardware.light@2.0-service \
+    android.hardware.light@2.0-impl \
+    lights.msm8994

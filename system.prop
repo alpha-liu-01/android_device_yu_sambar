@@ -111,5 +111,18 @@ ro.min_freq_0=384000
 ro.min_freq_4=384000
 ro.vendor.extension_library=libqti-perfd-client.so
 
-# Factory reset protection
-ro.frp.pst=/dev/block/bootdevice/by-name/config
+# Factory reset protection is left unset. The config partition checksum is
+# already valid and its OEM unlock byte is 1, but the block node is created
+# 0600 root because ueventd only matches /dev/block/bootdevice/by-name/config.
+# PersistentDataBlockService treats a failed open as an invalid checksum, and
+# TestHarnessModeService then aborts system_server during boot phase 500.
+
+# Bring-up: keep logcat in /data/misc/logd across forced reboots.
+# 16 files of 2 MiB each.
+persist.logd.logpersistd=logcatd
+persist.logd.logpersistd.size=16
+
+# The 3.10 f_fs has no AIO. Both adbd USB paths default to AIO reads, fail
+# with EINVAL, and rebind every few milliseconds; the host only sees "offline".
+ro.adb.nonblocking_ffs=0
+sys.usb.ffs.aio_compat=true

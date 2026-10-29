@@ -1,0 +1,5 @@
+# BOARD_ROOT_EXTRA_FOLDERS creates /bt_firmware. firmware and persist
+# already have labels in the qcom policy. The CM13 rules in the parent
+# directory are not compiled on Android 11.
+/bt_firmware(/.*)?                              u:object_r:bt_firmware_file:s0
+/file_contexts\.bin                             u:object_r:file_contexts_file:s0

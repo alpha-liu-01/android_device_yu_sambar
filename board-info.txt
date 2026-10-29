@@ -1,0 +1,3 @@
+# YU Yutopia / YU5050. Phase 1 does not pin baseband or bootloader versions.
+# A comment-only file makes `grep -v '#'` exit 1 and the system image rule fails.
+require board=MSM8994

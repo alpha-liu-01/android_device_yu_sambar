@@ -1,0 +1,45 @@
+# Android 11 imports this as /init.${ro.hardware}.rc. The CM13 init.qcom.rc
+# is not installed. Without a mount_all here, userdata stays an empty
+# directory, post-fs remounts / read-only, and zygote aborts creating
+# /data/dalvik-cache.
+
+on fs
+    # ueventd only creates /dev/block/platform/soc.0/${ro.boot.bootdevice}.
+    # Other clients still look up /dev/block/bootdevice.
+    wait /dev/block/platform/soc.0/${ro.boot.bootdevice}
+    symlink /dev/block/platform/soc.0/${ro.boot.bootdevice} /dev/block/bootdevice
+    mount_all /vendor/etc/fstab.qcom
+    # While cont_splash_enabled is set, lcd-backlight only stores the
+    # level and returns. The panel current is the WLED sink, full scale
+    # 4095, left there by LK. 512 is about an eighth.
+    write /sys/class/leds/wled/brightness 512
+    write /sys/class/leds/lcd-backlight/brightness 40
+    mkdir /dev/usb-ffs 0770 shell shell
+    mkdir /dev/usb-ffs/adb 0770 shell shell
+    mount functionfs adb /dev/usb-ffs/adb uid=2000,gid=2000
+    write /sys/class/android_usb/android0/f_ffs/aliases adb
+    write /sys/class/android_usb/android0/idVendor 18D1
+    write /sys/class/android_usb/android0/iSerial ${ro.serialno}
+
+# default.prop ships persist.sys.usb.config=none. Once /data is mounted,
+# the Android 6 property file overrides that with mtp,adb. This kernel has
+# the legacy android_usb gadget, and the generic configfs=0 rules do not
+# handle mtp,adb. Force adb either way.
+on boot
+    setprop sys.usb.config adb
+    write /sys/class/leds/wled/brightness 512
+    write /sys/class/leds/lcd-backlight/brightness 40
+
+# Bring-up: the stored screen_off_timeout is 30 s. Keep the panel awake on
+# USB/AC power so the first frames stay visible.
+on property:sys.boot_completed=1
+    exec_background - system system -- /system/bin/settings put global stay_on_while_plugged_in 7
+
+on property:sys.usb.config=mtp,adb && property:sys.usb.configfs=0
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor 18d1
+    write /sys/class/android_usb/android0/idProduct 4EE7
+    write /sys/class/android_usb/android0/functions adb
+    write /sys/class/android_usb/android0/enable 1
+    start adbd
+    setprop sys.usb.state ${sys.usb.config}

@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-add_lunch_combo cm_sambar-userdebug
+# Lunch choices live in AndroidProducts.mk (COMMON_LUNCH_CHOICES).

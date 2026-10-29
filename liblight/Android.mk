@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# hardware/qcom-caf/msm8994/display/liblight defines lights.msm8994.
+# This CM13 HAL keeps the Yutopia LED map. Set BOARD_USE_SAMBAR_LIBLIGHT
+# to build it, and stop the CAF module from defining the same name.
+
 LOCAL_PATH:= $(call my-dir)
-# HAL module implemenation stored in
-# hw/<COPYPIX_HARDWARE_MODULE_ID>.<ro.board.platform>.so
+
+ifeq ($(BOARD_USE_SAMBAR_LIBLIGHT),true)
+
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := lights.c
@@ -25,3 +30,5 @@ LOCAL_MODULE := lights.msm8994
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
+
+endif
