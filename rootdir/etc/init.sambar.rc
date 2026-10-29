@@ -29,6 +29,9 @@ on boot
     setprop sys.usb.config adb
     write /sys/class/leds/wled/brightness 512
     write /sys/class/leds/lcd-backlight/brightness 40
+    # userdebug starts /system/bin/sh on the UART. init.svc.console=running
+    # makes the lock screen say the serial console is hurting performance.
+    stop console
 
 # Bring-up: the stored screen_off_timeout is 30 s. Keep the panel awake on
 # USB/AC power so the first frames stay visible.

@@ -149,3 +149,16 @@ PRODUCT_PACKAGES += \
     android.hardware.light@2.0-service \
     android.hardware.light@2.0-impl \
     lights.msm8994
+
+# TWRP pulls android.hardware.boot@1.0-service and the 1.1 VINTF fragment
+# into vendor, but not the passthrough impl. After a userdata wipe,
+# StorageManagerService runs fstrim immediately. That calls
+# vold.needsCheckpoint(), which calls IBootControl::getService() while
+# holding the volume lock. The declared HAL never registers, so the wait
+# never ends and system_server never leaves setListener. The splash stays
+# up. This phone is not A/B: one slot, already successful, and nothing
+# is written to misc. The module name follows androidboot.hardware=qcom.
+# AOSP bootctrl.default rewrites misc and is not used.
+PRODUCT_PACKAGES += \
+    android.hardware.boot@1.0-impl \
+    bootctrl.qcom

@@ -4,7 +4,7 @@
 
 完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 3 项触控和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
 
-当前 system SHA256 `977197292482f6e18bd0647307bb3e42e30848d60fb3a20880433d9aef5c20b0`。boot 仍是内核 `#27`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
+当前 system SHA256 `165d579930970b4633c5c90feb1837740dd593deed41ea6f4035890048733b60`。boot 仍是内核 `#27`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
 
 阶段 1 留下、还没做的：USB 被 init 钉成只有 adb。没有 Gatekeeper。manifest 里的 `radio@1.1` 没有进程注册。
 
@@ -25,7 +25,9 @@
 
 只格式化 `mmcblk0p39`。用现在这份能挂上 f2fs 的 recovery 在分区上做 `mkfs.f2fs`。不用 `fastboot -w`：这颗 LK 的 format 不保证还是 f2fs，fstab 写的是 f2fs。`fstab.qcom` 的 userdata 只有 `formattable`，没有 `forceencrypt`，也没有 `fileencryption`。新盘不会进 CryptKeeper。格力那次会，是因为 userdata 带加密 footer。
 
-清完第一次开机走设置向导。Gatekeeper 装上之前不要设锁屏密码。阶段 1 的图案就是旧 Gatekeeper 的句柄，新系统校验不过。
+2026-10-29 已清。recovery 里 `/sbin/mkfs.f2fs` 是 1.4.0（2014-10-18），没有 `-f`。先卸掉 `/data` 和 `/sdcard`，再对 `/dev/block/mmcblk0p39` 执行 `mkfs.f2fs -l userdata -t 1`。扇区数 51600416，和阶段 0 的 userdata 一致。挂回去是空目录，24.6 GB，元数据占 171.5 MB。没有动 persist、modem、bluetooth、modemst、fsg、config。然后重启了一次。这次开机停在 YU 第一屏，原因和修法在「实现笔记」，不是再清一次盘。
+
+清完第一次开机走设置向导。授权过的 adb 公钥在 `/data/misc/adb/adb_keys`，一起没了，主机上会显示 `unauthorized`，要点一次允许。Gatekeeper 装上之前不要设锁屏密码。阶段 1 的图案就是旧 Gatekeeper 的句柄，新系统校验不过。
 
 ## 已经通过
 
@@ -76,6 +78,17 @@
 
 开机后 `dumpsys SurfaceFlinger` 是 `Qualcomm, Adreno (TM) 430, OpenGL ES 3.1 V@139.0`。日志里没有 `Unknown Chip ID`。桌面壁纸截图没有横条，现场在 `phase1/live-step9a/`。`screen_brightness` 写成 20 时 `lcd-backlight` 是 20、`wled` 是 279；写成 200 时是 200 和 2793。电源键之后两个都是 0，`mWakefulness=Asleep`，再唤醒回到亮。`copybit` 仍打不开 `libC2D2.so`，这次的合成不靠它，没有装。Launcher 壁纸中间还有「正在加载」，那是旧桌面数据，不是这一项。
 
+2026-10-29 清盘后的第一次开机停在 YU 第一屏。不是显示退回。`system_server` 的主线程停在 `StorageManagerService.connectVold` 的 `IVold.setListener`，`android.fg` 停在 `IVold.monitor`。两边都在等 `vold` 的同一把锁。拿着锁的是 `needsCheckpoint()`：空的 userdata 没有上次 fstrim 的记录，`PerformFstrimIfNeeded` 立刻跑，`vold` 去 `IBootControl::getService()`。TWRP 把 `android.hardware.boot@1.0-service` 和 `android.hardware.boot@1.1.xml` 装进了 vendor，没有装 passthrough 实现。manifest 里写了这个 HAL，进程起来就退出（`Could not get passthrough implementation`），`getService(true)` 一直重试。锁不放，`setListener` 不返回，开机动画交不出去。旧 userdata 上一次 fstrim 还没到期，所以之前能进桌面。这台机器不是 A/B，不能往 misc 写 slot 数据，内核开机日志在 misc 的 +1 MiB。
+
+`device.mk` 加上 `android.hardware.boot@1.0-impl` 和 `bootctrl.qcom`。内核命令行是 `androidboot.hardware=qcom`，`hw_get_module` 先找这个名字。AOSP 自己的 `bootctrl.default` 会改 misc，不用它。这个模块报告一个槽、已经启动成功，`markBootSuccessful` 是空操作，`setActiveBootSlot` 返回错误。不读不写 misc。稀疏文件 SHA256 `e16e89dd37ca9d88b1e62a8d6de849be1754b4f67144e69f82a721ce4b11d251`，展开后正好 3221225472。只刷了 system，三段 Writing 都是 OKAY，总时间 71.5 秒。这次开机进了系统。
+
+2026-10-29 进系统之后几乎每个应用过几秒就闪退，设置也打不开。锁屏上的 “Serial console enabled / Performance is impacted” 是 userdebug 在 `on init` 里执行了 `start console`，`init.svc.console=running` 时 `ActivityManagerService` 会挂这条常驻通知。它不是闪退的原因。闪退是 `system_server` 自己 abort：`TaskSnapshotLoader.loadTask` 把磁盘上的 JPEG 用 `Bitmap.copy(HARDWARE)` 转成硬件位图，再调 `createGraphicBufferHandle`。SwiftShader 时期 `Bitmap.copy` 把 `HARDWARE` 偷偷改成了 `ARGB_8888`，返回的仍是软件位图，JNI 里 `LOG_ALWAYS_FATAL`（`Hardware config is only supported config in Bitmap_getHardwareBuffer`）。`system_server` 一死，前台应用收到 `DeadSystemException`，看起来像应用闪退。快照写进 userdata 之后，下一次开机一加载就再次 abort，所以关机再开就停在外面。tombstone 在 `phase1/step9c/`。相机另有 `ArrayIndexOutOfBoundsException`（还没有相机 HAL），蓝牙 `startup_timer_expired`，这两项不是这次的闪退。
+
+`Bitmap.java` 恢复成原来的硬件位图路径。`TaskSnapshotLoader` 在结果不是 `Config.HARDWARE` 时直接返回，不再把 `system_server` 打死。`init.sambar.rc` 在 `on boot` 里 `stop console`，锁屏不再挂那条串口通知。没有改内核命令行，boot 仍是 `#27`。稀疏文件 SHA256 `165d579930970b4633c5c90feb1837740dd593deed41ea6f4035890048733b60`，展开后正好 3221225472。只刷了 system，三段 Writing 都是 OKAY，总时间 71.6 秒。没有格式化 userdata。重启后 `sys.boot_completed=1`，`init.svc.console=stopped`，没有那条串口通知。设置保持在前台，`system_server` 的 pid 没变，日志里没有再出现 `Hardware config is only supported`。
+
 ## 事件
 
 - 2026-10-29：第 1 项。`ro.hardware.egl=adreno`，用的是这台机器自己的 Adreno 用户态和 `a420_pm4.fw`、`a420_pfp.fw`。system SHA256 `977197292482f6e18bd0647307bb3e42e30848d60fb3a20880433d9aef5c20b0`。只刷了 system，重启一次。Adreno 430，OpenGL ES 3.1，横条没有了，背光能灭能亮。细节在「实现笔记」。
+- 2026-10-29：第 2 项之前清 userdata。recovery 里 `mkfs.f2fs -l userdata -t 1 /dev/block/mmcblk0p39`，24.6 GB，挂上是空的。其它分区没写。重启后 adb 是 `unauthorized`，旧的 `adb_keys` 在这块盘上。细节在「开始前先清 userdata」。
+- 2026-10-29：清盘后的那次开机停在第一屏。`vold` 在 `needsCheckpoint()` 里等 `IBootControl`，锁不放，`setListener` 不返回。装上 `bootctrl.qcom` 和 `android.hardware.boot@1.0-impl`。不写 misc。细节在「实现笔记」。
+- 2026-10-29：开机后应用过几秒闪退，再重启进不了系统。`system_server` 在任务快照上 abort，因为 `Bitmap.copy(HARDWARE)` 被改成了软件位图。已改回硬件位图，并在 `on boot` 停掉 serial console。system SHA256 `165d579930970b4633c5c90feb1837740dd593deed41ea6f4035890048733b60`。只刷了 system。重启后进了系统，设置不再被系统拖死，串口通知没有了。细节在「实现笔记」。
