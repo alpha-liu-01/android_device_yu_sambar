@@ -53,6 +53,15 @@ on boot
     # userdebug starts /system/bin/sh on the UART. init.svc.console=running
     # makes the lock screen say the serial console is hurting performance.
     stop console
+    # libbt-vendor reads this. A vendor.* key in system.prop is ignored.
+    setprop vendor.qcom.bluetooth.soc rome
+    # The HAL powers Rome through rfkill0, then downloads firmware on ttyHS0.
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
+    chmod 0660 /sys/class/rfkill/rfkill0/state
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/device/extldo
+    chmod 0660 /sys/class/rfkill/rfkill0/device/extldo
+    chown bluetooth bluetooth /dev/ttyHS0
+    chmod 0660 /dev/ttyHS0
 
 # Bring-up: the stored screen_off_timeout is 30 s. Keep the panel awake on
 # USB/AC power so the first frames stay visible.
@@ -134,3 +143,16 @@ on property:sys.usb.config=midi,adb && property:sys.usb.configfs=0
     write /sys/class/android_usb/android0/enable 1
     start adbd
     setprop sys.usb.state ${sys.usb.config}
+
+# libbt-vendor sets this after the TLV download. This phone's filter
+# uses the unprefixed property and then hands HCI back on a local socket.
+on property:wc_transport.start_hci=true
+    start wcnss_filter
+
+on property:wc_transport.start_hci=false
+    stop wcnss_filter
+
+service wcnss_filter /vendor/bin/wcnss_filter
+    user bluetooth
+    group bluetooth system
+    disabled

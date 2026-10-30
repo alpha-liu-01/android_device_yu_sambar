@@ -36,6 +36,8 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.touchscreen.multitouch.jazzhand.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.touchscreen.multitouch.jazzhand.xml \
     frameworks/native/data/etc/android.hardware.usb.accessory.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.usb.accessory.xml \
     frameworks/native/data/etc/android.hardware.usb.host.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.usb.host.xml \
+    frameworks/native/data/etc/android.hardware.bluetooth.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.bluetooth.xml \
+    frameworks/native/data/etc/android.hardware.bluetooth_le.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.bluetooth_le.xml \
     frameworks/native/data/etc/android.hardware.wifi.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.wifi.xml \
     frameworks/native/data/etc/handheld_core_hardware.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/handheld_core_hardware.xml
 
@@ -231,3 +233,19 @@ PRODUCT_COPY_FILES += \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/acdb/Speaker_cal.acdb:$(TARGET_COPY_OUT_SYSTEM)/etc/acdbdata/MTP/Speaker_cal.acdb \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/kernel-modules/tfa-stub/tfa_stub.ko:$(TARGET_COPY_OUT_VENDOR)/lib/modules/tfa_stub.ko \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/sambar-audio-card:$(TARGET_COPY_OUT_VENDOR)/bin/sambar-audio-card
+
+# Bluetooth. The HIDL service is the one already declared in manifest.xml.
+# A2DP stays on the legacy audio.a2dp.default module that the policy
+# already loads. Headset calls are not this item. wcnss_filter and the
+# 64-bit libdiag it needs are this phone's. btfw*.tlv and btnv*.bin stay
+# on mmcblk0p12.
+PRODUCT_PACKAGES += \
+    android.hardware.bluetooth@1.0-impl \
+    android.hardware.bluetooth@1.0-service \
+    libbt-vendor \
+    audio.a2dp.default
+
+PRODUCT_COPY_FILES += \
+    $(SAMBAR_BLOB)/bin/wcnss_filter:$(TARGET_COPY_OUT_VENDOR)/bin/wcnss_filter \
+    $(SAMBAR_BLOB)/vendor/lib64/libdiag.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libdiag.so \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/bluetooth/bdaddr:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth/bdaddr

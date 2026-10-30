@@ -129,4 +129,13 @@ WIFI_DRIVER_MODULE_NAME := "wlan"
 WIFI_HIDL_UNIFIED_SUPPLICANT_SERVICE_RC_ENTRY := true
 WIFI_AVOID_IFACE_RESET_MAC_CHANGE := true
 
+# QCA Rome on /dev/ttyHS0. libbt-vendor reads the chip version and picks
+# btfw30.tlv or btfw32.tlv from this phone's /bt_firmware. That partition
+# is already mounted; nothing here writes it. This phone's wcnss_filter
+# watches the unprefixed wc_transport.* properties.
+BOARD_HAVE_BLUETOOTH := true
+BOARD_HAVE_BLUETOOTH_QCOM := true
+BOARD_HAS_QCA_BT_ROME := true
+QCOM_BT_USE_OLD_WCNSS_FILTER := true
+
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop

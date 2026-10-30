@@ -29,9 +29,13 @@ ro.config.max_starting_bg=8
 # set roaming indicator to always show
 ro.config.always_show_roaming=true
 
-# Bluetooth
-bluetooth.enable_timeout_ms=12000
+# Bluetooth. libbt-vendor reads vendor.qcom.bluetooth.soc. The unprefixed
+# name is what the old stack looked for. Firmware download plus the
+# filter can take longer than the default 12 s.
+bluetooth.enable_timeout_ms=30000
 qcom.bluetooth.soc=rome
+vendor.qcom.bluetooth.soc=rome
+ro.bt.bdaddr_path=/vendor/etc/bluetooth/bdaddr
 
 # Camera
 persist.camera.hal.debug.mask=268435456

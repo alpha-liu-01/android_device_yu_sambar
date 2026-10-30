@@ -2,9 +2,9 @@
 
 日期：2026-10-29。路线图是 `docs/sambar-roadmap.md`。阶段 1 已完成，记录在 `docs/sambar-phase-1.md`。本文记阶段 2 的顺序和约束。实现笔记和事件先空着，做的时候再补。
 
-完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi 和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
+完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi、第 7 项蓝牙和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
 
-当前 system SHA256 `1b37e0850b017b006fec6119bf35b13efdd31031d924a3d92610f2da94ffe961`。boot 仍是内核 `#27`，设备树里补了 1 kΩ 的电池 ID，镜像在 `phase1/boot-27-battery-id.img`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
+当前 system SHA256 `545ddb143e696d8627f99edcd127a975030b13fbdea3764fd579daab08311720`。boot 仍是内核 `#27`，设备树里补了 1 kΩ 的电池 ID，镜像在 `phase1/boot-27-battery-id.img`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
 
 阶段 1 留下、还没做的：没有 Gatekeeper。manifest 里的 `radio@1.1` 没有进程注册。
 
@@ -43,12 +43,12 @@
 3. 触控。已通过，见上面。
 4. USB。已通过。文件两个方向都拷过。充电、MTP、PTP 能切换。内核仍是传统 `android_usb`，不是 ConfigFS。adb 继续用阻塞读写（`ro.adb.nonblocking_ffs=0`，`sys.usb.ffs.aio_compat=true`）。U 盘按 fstab 的 `usbdisk` 挂，这次没插，不挡这一项。细节在「实现笔记」。
 5. Wi-Fi。已通过。`wlan.ko` 加载，固件来自这台机器的 `/firmware/image`。扫描后连上 `ZCXYYY0824`，地址 `10.0.0.108`，`ping` 通。supplicant 是 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。细节在「实现笔记」。
-6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。
-7. 蓝牙。开关、扫描、配对、A2DP 播放。固件读 `mmcblk0p12`，不另刷这个分区。耳机上的通话留到收口之后。
+6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。整首 MP3 卡顿、FLAC 打不开、音量减键没有上报，记在「先记下、后面再修」，不在这一项里改。
+7. 蓝牙。已通过。开关、扫描、配对、A2DP 播放都做过。固件读 `mmcblk0p12`，没有另刷这个分区。同一首 MP3 在耳机里不卡，是因为这条路不走压缩直通，喇叭上的卡顿还在。FLAC 仍然打不开。耳机上的通话留到收口之后。细节在「实现笔记」。
 8. 传感器。加速度计、陀螺仪、磁力计、气压、光感、距离、霍尔都有事件。persist 里的校准不动。阶段 0 探到的是 ST LSM6DS3、`yas537_mag`、`alps_pressure`，加上光感、距离、霍尔。
 9. 蜂窝。第一张卡识别、驻网、数据能上网，听筒和免提各打通一次。RIL 用这台机器的 modem 分区和现有 blob。短信要能收发。第二张卡和 VoLTE 不挡。阶段 0 没有读卡槽数量。
 10. 振动。已通过，见上面。
-11. 硬件编解码。视频能播能录一段，音频解码不走软解兜底。Venus 和 ADSP 用现有固件路径。编解码进程崩溃先修这个，再进相机。
+11. 硬件编解码。视频能播能录一段，音频解码不走软解兜底。Venus 和 ADSP 用现有固件路径。编解码进程崩溃先修这个，再进相机。MP3 走喇叭的压缩直通时放几秒就空几秒，在这一项里修，不要改成永久软解。蓝牙耳机里同一首不卡，那是另一条 PCM 再编码的路，不算这一项过了。FLAC 打不开停在提取器，不和 Venus 绑在一起。细节在「先记下、后面再修」。
 12. 相机。后摄 `imx230`、前摄 `ov8865` 都能预览、拍照、录短视频。32 位 HAL1，不在这一阶段打开 HAL3。
 13. 指纹。先有 Gatekeeper，再录入一枚，锁屏能解开，另一根手指被拒绝。用户态继续是 Silead 的 `fpsvcd`，校准留在 persist。没有 Gatekeeper 时不要设密码。
 14. 休眠唤醒再确认一次。第 1 项的电源键之后，Wi-Fi、蜂窝和传感器都开着时再睡一次、再亮一次。背光必须灭。阶段 1 里 `cont_splash` 期间 `lcd-backlight` 不写硬件，电流在 WLED 上。
@@ -67,6 +67,16 @@
 6. 能挂这块 f2fs、也能刷 system-as-root 包的 recovery。现在的 TWRP 2.8.7 能挂 `/data`，不保证能刷 18.1 的包。换 recovery 之前，现在这份镜像留在 `device-backup/` 的恢复路径上。
 7. 加密。这次不做。3.10 上的文件加密单独开一轮，不和清盘绑在一起。
 8. SELinux enforcing。放在最后。每加一个 HAL 都会多一批 denial，现在切只会反复改策略。
+
+## 先记下、后面再修
+
+2026-10-29 看过日志，三件都先不改。喇叭、听筒、有线耳机和麦克风当时已经有声音，这三件不把第 6 项退回去。
+
+整首 MP3 放大约 4 秒就空几秒。`洛天依 - 东京不太热.mp3` 走喇叭时是 `compress-offload-playback`，44100 Hz，平均码率 128000，不是软解。压缩驱动反复打出 `No space available in compress driver`，`compress_wait` 大约每两秒返回一次。衔接下一段时 `offload_thread_loop: Next track returned error -1`。每次重新出声，`tfa start with volume 0`，喇叭通路被拆掉再接上。2026-10-30 同一首在蓝牙耳机里是连续的。那次日志里没有 `compress-offload-playback`，A2DP 吃的是 PCM，再由 `a2dp_aac_encoder` 编成 AAC。耳机不卡，不表示这条压缩直通好了。放到第 11 项：把这台机器 ADSP 上的压缩直通修通，固件仍用 `/firmware/image` 里现有的。不要为了先能听就把策略里的 `AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD` 拿掉、改成永久软解，第 11 项要求音频解码不走软解兜底。
+
+FLAC 完全放不出。`Beyond - 光辉岁月.flac` 文件头是 `fLaC`（`66 4c 61 43`），STREAMINFO 的长度是 34 字节，头是正常的。失败停在 `FLACExtractor: end_of_metadata failed`，然后 `GenericSource: source has no track`。没有解码器日志，也没有声卡打开。日志里没有 `FLACParser::errorCallback`，所以不是帧校验错。MediaProvider 打开它时写了 `Using lower FS`。可能是这份内容 URI 上 `readAt` 提前结束，也可能是后面的图片或注释块让 `process_until_end_of_metadata` 返回失败。再拿另一首 FLAC 区分是这一份文件还是提取器。不放进第 11 项，和 Venus、ADSP 无关。
+
+音量减键在 Android 里没有这个键。`gpio-keys` 只上报 115，对应音量加，设备树里挂在 pm8994 GPIO 3。`qpnp_pon` 只上报 116，对应电源。没有任何输入设备上报 114。`qpnp_pon.kl` 把 114 写成音量减，内核不发这个码，映射不会生效。一加 2 的音量减在 `msm8994-mtp.dtsi` 里是 pm8994 GPIO 2、`linux,code = <114>`。捐赠树 `msm-pm8994.dtsi` 的 `pon_2` 把 114 注释掉了，注释写音量减改由 GPIO 控制。PM9X 的设备树只抄了音量加，没有音量减。进 recovery 是 LK 直接读这个键，不经过 Android 输入设备，所以按键本身没有坏。修的时候先确认这台机器的音量减是 GPIO 2 还是 PMIC resin，再把对应节点补进正在启动的那份 PVT 设备树。沿用电池 ID 那种只改 DTB 的做法，不要直接 `mka bootimage`：整份重编会把 `second_addr` 写成 0，或者丢掉 `soc.0`，开机回到 fastboot。这件事不放进第 11 项，下一次允许改 boot 时做。
 
 ## 实现笔记
 
@@ -116,6 +126,16 @@ qcwcn HAL 和 HIDL supplicant 装进 vendor。`android.hardware.wifi@1.4` 和 `a
 
 稀疏文件 1606476308 字节，SHA256 `1b37e0850b017b006fec6119bf35b13efdd31031d924a3d92610f2da94ffe961`，展开后正好 3221225472。四段 Writing 都是 OKAY，总时间 72.4 秒。只刷了 system，boot 仍是 `#27`。没有格式化 userdata。刷之前删掉手建的 `/data/vendor/wifi`，重启后 init 重新建好。`lshal` 里 `IWifi/default` 和 `ISupplicant/default` 都在。`wlan.ko` 已加载。扫描能看到周围网络。连上 `ZCXYYY0824`，5 GHz，地址 `10.0.0.108/24`，`ping 1.1.1.1` 三包都通。
 
+2026-10-30 第 7 项。蓝牙进程起不来。`com.android.bluetooth` 反复死在 `startup_timer_expired`，`dumpsys bluetooth_manager` 是 OFF，地址是空的。固件分区已经挂在 `/bt_firmware`，只读，文件是 2015-08-30 的 `btfw30.tlv`、`btfw32.tlv`、`btnv30.bin`、`btnv32.bin`。没有 HAL，也没有 `libbt-vendor`。没有往 `mmcblk0p12` 写任何东西，也没有拿别的机器的 TLV 或地址。
+
+`BOARD_HAVE_BLUETOOTH_QCOM` 打开之后，CAF 的 `libbt-vendor` 按芯片版本从 `/bt_firmware/image/` 选 3.0 或 3.2 的固件，串口是写死的 `/dev/ttyHS0`。它读的属性是 `vendor.qcom.bluetooth.soc`，`system.prop` 里的 `vendor.*` 不会进系统。`init.sambar.rc` 在 `on boot` 里把这个属性写成 `rome`，并把 `rfkill0` 和 `/dev/ttyHS0` 交给 `bluetooth`。这台机器的 `wcnss_filter` 看的是不带 `vendor.` 前缀的 `wc_transport.*`，所以 `QCOM_BT_USE_OLD_WCNSS_FILTER` 打开。固件下完之后 `wc_transport.start_hci=true`，init 拉起 `/vendor/bin/wcnss_filter`。这个二进制要 64 位的 `libdiag.so`，用的是这台机器自己的。A2DP 没有装 `bluetooth.audio@2.0`。策略里原来的 `a2dp` 模块还在，协议栈走旧的 `bt_a2dp_hw`，控制套接字是 `/data/misc/bluedroid/.a2dp_ctrl`。耳机通话没做。
+
+HIDL 服务在拿到地址之前会直接退出（`Open: No Bluetooth Address!`）。`persist/.bt_nv.bin` 是 9 字节：`01 00 06` 后面跟着 `a1 a3 17 00 00 00`。这就是这台机器的地址，不是从别的板子抄的。写成 `/vendor/etc/bluetooth/bdaddr`，内容正好是 `a1:a3:17:00:00:00` 十七个字符，没有换行。读地址的代码把多出来的一个字节当成非法。`ro.bt.bdaddr_path` 指到这个文件。
+
+稀疏文件 1608602132 字节，SHA256 `545ddb143e696d8627f99edcd127a975030b13fbdea3764fd579daab08311720`，展开后正好 3221225472。四段 Writing 都是 OKAY，总时间 72.7 秒。只刷了 system，boot 仍是 `#27`。没有格式化 userdata，也没有刷 bluetooth 分区。然后重启了一次。
+
+开机后 `vendor.qcom.bluetooth.soc=rome`。打开蓝牙，`Bluetooth FW and transport layer are initialized`，`wcnss_filter` 在跑。状态 ON，地址 `A1:A3:17:00:00:00`，名字 YU5050。扫描能看到 `LYWSD03MMC`。用户配对之后耳机里有声音。播放 `洛天依 - 东京不太热.mp3` 时，`bt_a2dp_hw` 的 `A2DP_CTRL_CMD_START` 返回 status 0，`a2dp_aac_encoder` 每 23 ms 吃 4057 字节 PCM。日志里没有 `compress-offload-playback`，也没有 `No space available in compress driver`。喇叭那条路把同一首 MP3 交给 ADSP 的压缩直通，驱动空了就把功放拆掉再接上，所以卡。耳机这条路先把 MP3 解成 PCM，再在蓝牙进程里编成 AAC 送出去，根本不进那条压缩直通。耳机不卡，不说明第 11 项已经好了。同一段时间 FLAC 仍是 `FLACExtractor: end_of_metadata failed`，然后 `GenericSource: source has no track`，和有没有连耳机无关。aptX 的编码库不在镜像里，这次走的是 AAC。耳机上的通话没有测。Wi-Fi 刷完之后仍是 `10.0.0.108`。
+
 ## 事件
 
 - 2026-10-29：第 1 项。`ro.hardware.egl=adreno`，用的是这台机器自己的 Adreno 用户态和 `a420_pm4.fw`、`a420_pfp.fw`。system SHA256 `977197292482f6e18bd0647307bb3e42e30848d60fb3a20880433d9aef5c20b0`。只刷了 system，重启一次。Adreno 430，OpenGL ES 3.1，横条没有了，背光能灭能亮。细节在「实现笔记」。
@@ -126,3 +146,5 @@ qcwcn HAL 和 HIDL supplicant 装进 vendor。`android.hardware.wifi@1.4` 和 `a
 - 2026-10-29：第 4 项。USB HAL 报 `port0` 为设备口，`init.sambar.rc` 按传统 `android_usb` 写 MTP 和 PTP。充电、MTP、PTP 都能切换，文件两个方向都拷过。system SHA256 `f54b6630c4524ccce1032d97314e779d7bdad8b79ad299a053594c7aa48fed6e`。只刷了 system。细节在「实现笔记」。
 - 2026-10-29：电量停在 50%、AIDA64 显示 4.000V。电池 ID 980Ω 对不上曲线，驱动把电量固定成 50。PVT 设备树给 `apak-3000mah-10k` 加了 1 kΩ。内核仍是 `#27`。开机后电量 68%，电压大约 4.0V，充满容量 3124 mAh。电脑 USB 仍是 500 mA。细节在「实现笔记」。
 - 2026-10-29：第 5 项。`wlan.ko` 由 qcwcn HAL 加载，固件是这台机器 `/firmware/image` 上的 `qwlan30.bin` 和 `bdwlan30.bin`。supplicant 是 HIDL。连上 `ZCXYYY0824`，地址 `10.0.0.108`，`ping` 通。内核仍是 `#27`，`CONFIG_QCA_CLD_WLAN=m`。system SHA256 `1b37e0850b017b006fec6119bf35b13efdd31031d924a3d92610f2da94ffe961`。只刷了 system。细节在「实现笔记」。
+- 2026-10-29：整首 MP3 走压缩直通时放几秒就空几秒，放到第 11 项修 ADSP，不改成永久软解。FLAC 在提取器读元数据时失败，文件头是正常的 `fLaC`，不和 Venus 绑在一起。音量减没有输入事件，设备树里没有这个键，下一次改 boot 时补。三件都先不改。细节在「先记下、后面再修」。
+- 2026-10-30：第 7 项。Rome 固件仍在 `mmcblk0p12`，没有刷这个分区。`libbt-vendor` 从 `/bt_firmware/image` 下载，`wcnss_filter` 用这台机器自己的。地址来自 `persist/.bt_nv.bin`。开关、扫描、配对之后耳机里有声音，编码是 AAC。同一首 MP3 在耳机里不卡，因为这条路吃 PCM，不走喇叭的压缩直通。FLAC 仍停在提取器。system SHA256 `545ddb143e696d8627f99edcd127a975030b13fbdea3764fd579daab08311720`。只刷了 system，boot 仍是 `#27`。细节在「实现笔记」。

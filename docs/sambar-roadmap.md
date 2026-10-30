@@ -159,7 +159,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 
 格力阶段 3 把「能进桌面」从收口标准里拿掉，改成一套可以天天用的系统，然后才谈下一版 Android。这边同样。阶段 0 探到的硬件都进下表。表里没有的 NFC、红外、FM 不排：`ueventd.qcom.rc` 里的 `nfc-nci` 是高通模板，阶段 0 没有对应的输入设备或芯片。定位用捐赠树的 HIDL gnss，只留 sambar 的 `gps.conf`。阶段 0 没有定位成功的记录，蜂窝通了再看，不单独挡住。
 
-完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi 和第 10 项振动已经通过。电量计已配上 `apak-3000mah-10k`，记录在 `docs/sambar-phase-2.md`，不单列一项。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
+完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi、第 7 项蓝牙和第 10 项振动已经通过。电量计已配上 `apak-3000mah-10k`，记录在 `docs/sambar-phase-2.md`，不单列一项。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
 
 启动链分区、modem、bluetooth、modemst1、modemst2、fsg、persist、persistbak、config 继续不写。不跑 `oem unlock`。不用一加 2 的 system、vendor 或固件镜像。一加 2 只提供 SoC 级的 HAL 结构。
 
@@ -180,7 +180,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 | Atmel `atmel_mxt_ts_T100_touchscreen`，固件 `A4_15_2.2_AA.fw` | 第 3 项。用户确认已经能用 |
 | 声卡 `msm8994-tomtom-mtp-snd-card`（WCD9330），功放 NXP TFA9887 | 第 6 项。`libtfa9887` 和 acdb 用现有专有文件 |
 | Wi-Fi 模块 `wlan.ko` | 第 5 项。已通过，继续编成模块 |
-| 蓝牙 QCA Rome，固件分区 `mmcblk0p12`（1 MiB，df 显示的 1.0G 是错的） | 第 7 项 |
+| 蓝牙 QCA Rome，固件分区 `mmcblk0p12`（1 MiB，df 显示的 1.0G 是错的） | 第 7 项。已通过。固件仍在这个分区上，没有另刷 |
 | ST LSM6DS3 加速度计和陀螺仪，`yas537_mag`，`alps_pressure`，光感，距离，霍尔 | 第 8 项。不刷 persist |
 | modem 分区 80 MiB，modemst1 / modemst2 / fsg 各 4 MiB | 第 9 项。继续用这台机器自己的分区 |
 | 相机 `imx230` 与 `ov8865`，`BOARD_QTI_CAMERA_32BIT_ONLY`，`persist.camera.HAL3.enabled=0` | 第 12 项。维持 HAL1 |
@@ -188,7 +188,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 | USB 在 Android 里是 `2a96:3014`，bootloader 是 `2a96:301c` | 第 4 项。已通过。现在的 gadget 用 `18d1` |
 | eMMC，无 A/B，无 vendor 分区 | 不单列。system 仍是 3 GiB |
 
-阶段 0 的表没有单独写振动马达。阶段 1 为了让 `system_server` 过阶段 480，已经装了 `vibrator.default`。用户确认马达是好的，第 10 项已通过。也没有实体导航键：`gpio-keys.kl` 只有音量加，`qpnp_pon.kl` 只有电源和音量减。虚拟导航键和全面屏手势是第 2 项，已通过。编解码不是阶段 0 的探针。格力把它算进日用收口，这边放在第 11 项。
+阶段 0 的表没有单独写振动马达。阶段 1 为了让 `system_server` 过阶段 480，已经装了 `vibrator.default`。用户确认马达是好的，第 10 项已通过。也没有实体导航键：`gpio-keys.kl` 只有音量加，`qpnp_pon.kl` 写了电源和音量减。跑起来的 `gpio-keys` 只上报 115，`qpnp_pon` 只上报 116，音量减（114）没有事件。按键本身是好的，进 recovery 用得了。补进设备树要等下一次改 boot，细节在 `docs/sambar-phase-2.md`。虚拟导航键和全面屏手势是第 2 项，已通过。编解码不是阶段 0 的探针。格力把它算进日用收口，这边放在第 11 项。
 
 #### 验收顺序
 
@@ -197,12 +197,12 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 3. 触控。已通过。用户确认能用。固件仍是 `A4_15_2.2_AA.fw`。清盘或换 GPU 之后如果触摸没了，再回到这项。
 4. USB。已通过。充电、MTP、PTP 能切换，文件两个方向都拷过。内核仍是传统 `android_usb`。记录在 `docs/sambar-phase-2.md`。
 5. Wi-Fi。已通过。`wlan.ko` 加载，固件来自这台机器的 `/firmware/image`。连上 `ZCXYYY0824`，地址 `10.0.0.108`，`ping` 通。supplicant 是 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。记录在 `docs/sambar-phase-2.md`。
-6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。
-7. 蓝牙。开关、扫描、配对、A2DP 播放。固件读 `mmcblk0p12`，不另刷这个分区。耳机上的通话留到收口之后。
+6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。整首 MP3 卡顿、FLAC 打不开、音量减键没有上报，记在 `docs/sambar-phase-2.md`，不在这一项里改。
+7. 蓝牙。已通过。开关、扫描、配对、A2DP 播放都做过。固件读 `mmcblk0p12`，没有另刷。同一首 MP3 在耳机里不卡，是因为 A2DP 吃 PCM 再编成 AAC，不走喇叭的压缩直通。FLAC 仍然打不开。耳机上的通话留到收口之后。记录在 `docs/sambar-phase-2.md`。
 8. 传感器。加速度计、陀螺仪、磁力计、气压、光感、距离、霍尔都有事件。persist 里的校准不动。
 9. 蜂窝。第一张卡识别、驻网、数据能上网，听筒和免提各打通一次。RIL 用这台机器的 modem 分区和现有 blob，不换一加 2 的。短信要能收发。第二张卡和 VoLTE 不挡。阶段 0 没有读卡槽数量。
 10. 振动。已通过。用户确认马达是好的。
-11. 硬件编解码。视频能播能录一段，音频解码不走软解兜底。Venus 和 ADSP 用现有固件路径。编解码进程崩溃先修这个，再进相机。
+11. 硬件编解码。视频能播能录一段，音频解码不走软解兜底。Venus 和 ADSP 用现有固件路径。编解码进程崩溃先修这个，再进相机。MP3 走喇叭的压缩直通时放几秒就空几秒，在这一项里修通，不要改成永久软解。蓝牙耳机里同一首不卡，那是另一条 PCM 再编码的路，不算这一项过了。FLAC 打不开停在提取器，不和 Venus 绑在一起。细节在 `docs/sambar-phase-2.md`。
 12. 相机。后摄 `imx230`、前摄 `ov8865` 都能预览、拍照、录短视频。32 位 HAL1，不在这一阶段打开 HAL3。
 13. 指纹。先有 Gatekeeper，再录入一枚，锁屏能解开，另一根手指被拒绝。用户态继续是 Silead 的 `fpsvcd`，校准留在 persist。没有 Gatekeeper 时不要设密码。
 14. 休眠唤醒再确认一次。第 1 项的电源键之后，Wi-Fi、蜂窝和传感器都开着时再睡一次、再亮一次。背光必须灭。阶段 1 里 `cont_splash` 期间 `lcd-backlight` 不写硬件，电流在 WLED 上。
