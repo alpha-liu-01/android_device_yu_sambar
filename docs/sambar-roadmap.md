@@ -159,7 +159,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 
 格力阶段 3 把「能进桌面」从收口标准里拿掉，改成一套可以天天用的系统，然后才谈下一版 Android。这边同样。阶段 0 探到的硬件都进下表。表里没有的 NFC、红外、FM 不排：`ueventd.qcom.rc` 里的 `nfc-nci` 是高通模板，阶段 0 没有对应的输入设备或芯片。定位用捐赠树的 HIDL gnss，只留 sambar 的 `gps.conf`。阶段 0 没有定位成功的记录，蜂窝通了再看，不单独挡住。
 
-完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
+完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi 和第 10 项振动已经通过。电量计已配上 `apak-3000mah-10k`，记录在 `docs/sambar-phase-2.md`，不单列一项。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
 
 启动链分区、modem、bluetooth、modemst1、modemst2、fsg、persist、persistbak、config 继续不写。不跑 `oem unlock`。不用一加 2 的 system、vendor 或固件镜像。一加 2 只提供 SoC 级的 HAL 结构。
 
@@ -179,7 +179,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 | Adreno 430，`ro.opengles.version=196609`（OpenGL ES 3.1） | 第 1 项。已通过，GLES 是 Adreno 430 |
 | Atmel `atmel_mxt_ts_T100_touchscreen`，固件 `A4_15_2.2_AA.fw` | 第 3 项。用户确认已经能用 |
 | 声卡 `msm8994-tomtom-mtp-snd-card`（WCD9330），功放 NXP TFA9887 | 第 6 项。`libtfa9887` 和 acdb 用现有专有文件 |
-| Wi-Fi 模块 `wlan.ko` | 第 5 项。继续编成模块 |
+| Wi-Fi 模块 `wlan.ko` | 第 5 项。已通过，继续编成模块 |
 | 蓝牙 QCA Rome，固件分区 `mmcblk0p12`（1 MiB，df 显示的 1.0G 是错的） | 第 7 项 |
 | ST LSM6DS3 加速度计和陀螺仪，`yas537_mag`，`alps_pressure`，光感，距离，霍尔 | 第 8 项。不刷 persist |
 | modem 分区 80 MiB，modemst1 / modemst2 / fsg 各 4 MiB | 第 9 项。继续用这台机器自己的分区 |
@@ -196,7 +196,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 2. 系统导航。已通过。三键导航栏和全面屏手势都能返回、回桌面、打开最近任务。记录在 `docs/sambar-phase-2.md`。
 3. 触控。已通过。用户确认能用。固件仍是 `A4_15_2.2_AA.fw`。清盘或换 GPU 之后如果触摸没了，再回到这项。
 4. USB。已通过。充电、MTP、PTP 能切换，文件两个方向都拷过。内核仍是传统 `android_usb`。记录在 `docs/sambar-phase-2.md`。
-5. Wi-Fi。`wlan.ko` 加载，固件来自这台机器，能扫描、连接、拿到地址，`ping` 通。supplicant 用 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。
+5. Wi-Fi。已通过。`wlan.ko` 加载，固件来自这台机器的 `/firmware/image`。连上 `ZCXYYY0824`，地址 `10.0.0.108`，`ping` 通。supplicant 是 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。记录在 `docs/sambar-phase-2.md`。
 6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。
 7. 蓝牙。开关、扫描、配对、A2DP 播放。固件读 `mmcblk0p12`，不另刷这个分区。耳机上的通话留到收口之后。
 8. 传感器。加速度计、陀螺仪、磁力计、气压、光感、距离、霍尔都有事件。persist 里的校准不动。

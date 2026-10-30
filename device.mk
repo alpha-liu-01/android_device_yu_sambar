@@ -174,3 +174,22 @@ PRODUCT_PACKAGES += \
 # device-tree symlink. The absolute path is the real file.
 PRODUCT_COPY_FILES += \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/usb/android.hardware.usb@1.0-service.sambar.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.usb@1.0-service.sambar.rc
+
+# Wi-Fi. The HAL's own VINTF fragment declares android.hardware.wifi.
+# Do not also add it to manifest.xml. qwlan30.bin, bdwlan30.bin, otp30.bin
+# and utf30.bin stay on this phone's firmware partition. The cfg is the
+# file already in this tree. The existing symlink is
+# /system/etc/firmware/wlan/qca_cld/WCNSS_qcom_cfg.ini.
+PRODUCT_PACKAGES += \
+    android.hardware.wifi@1.0-service \
+    libwifi-hal-ctrl \
+    libcld80211 \
+    libwpa_client \
+    hostapd \
+    wpa_supplicant \
+    wpa_supplicant.conf
+
+PRODUCT_COPY_FILES += \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/wifi/WCNSS_qcom_cfg.ini:$(TARGET_COPY_OUT_SYSTEM)/etc/wifi/WCNSS_qcom_cfg.ini \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/wifi/wpa_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/wpa_supplicant_overlay.conf \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/wifi/p2p_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/p2p_supplicant_overlay.conf

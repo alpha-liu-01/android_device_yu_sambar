@@ -21,6 +21,15 @@ on fs
     write /sys/class/android_usb/android0/idVendor 18D1
     write /sys/class/android_usb/android0/iSerial ${ro.serialno}
 
+# The HIDL supplicant copies its conf here on startup. The directory is
+# not created by the generic rc. Without it, STA setup fails and Wi-Fi
+# turns itself back off.
+on post-fs-data
+    mkdir /data/vendor 0771 root root
+    mkdir /data/vendor/wifi 0770 wifi wifi
+    mkdir /data/vendor/wifi/wpa 0770 wifi wifi
+    mkdir /data/vendor/wifi/wpa/sockets 0770 wifi wifi
+
 # The generic configfs=0 rules only program adb and accessory. This kernel
 # is the legacy android_usb gadget. f_ffs aliases "adb", so a composition
 # that contains adb is written as "mtp,adb" and the driver binds ffs.

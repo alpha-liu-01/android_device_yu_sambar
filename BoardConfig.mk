@@ -108,8 +108,23 @@ SOONG_CONFIG_makeVarsPlugin += TW_THEME
 SOONG_CONFIG_makeVarsPlugin_TW_THEME := portrait_hdpi
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.qcom
 
-# wlan.ko is a kernel module (see sambar_defconfig). The qcwcn Wi-Fi HAL
-# needs libwpa_client, which phase 1 does not build. Leave the HAL off
-# until the supplicant is wired up.
+# wlan.ko stays a module. Built-in CONFIG_QCA_CLD_WLAN=y does not boot
+# this board. The qcwcn HAL loads the module and the HIDL supplicant
+# associates. Firmware is this phone's /firmware/image, not a copy.
+BOARD_HAS_QCOM_WLAN := true
+BOARD_HAS_QCOM_WLAN_SDK := true
+BOARD_WLAN_DEVICE := qcwcn
+BOARD_WPA_SUPPLICANT_DRIVER := NL80211
+BOARD_WPA_SUPPLICANT_PRIVATE_LIB := lib_driver_cmd_$(BOARD_WLAN_DEVICE)
+BOARD_HOSTAPD_DRIVER := NL80211
+BOARD_HOSTAPD_PRIVATE_LIB := lib_driver_cmd_$(BOARD_WLAN_DEVICE)
+WPA_SUPPLICANT_VERSION := VER_0_8_X
+HOSTAPD_VERSION := VER_0_8_X
+WIFI_DRIVER_MODULE_PATH := "/system/lib/modules/wlan.ko"
+WIFI_DRIVER_MODULE_NAME := "wlan"
+# fwpath is 0644 root. The HAL runs as wifi and cannot write it.
+# insmod already brings up wlan0 in STA, so do not set WIFI_DRIVER_FW_PATH_*.
+WIFI_HIDL_UNIFIED_SUPPLICANT_SERVICE_RC_ENTRY := true
+WIFI_AVOID_IFACE_RESET_MAC_CHANGE := true
 
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop

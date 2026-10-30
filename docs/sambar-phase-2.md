@@ -2,9 +2,9 @@
 
 日期：2026-10-29。路线图是 `docs/sambar-roadmap.md`。阶段 1 已完成，记录在 `docs/sambar-phase-1.md`。本文记阶段 2 的顺序和约束。实现笔记和事件先空着，做的时候再补。
 
-完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB 和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
+完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi 和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
 
-当前 system SHA256 `f54b6630c4524ccce1032d97314e779d7bdad8b79ad299a053594c7aa48fed6e`。boot 仍是内核 `#27`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
+当前 system SHA256 `1b37e0850b017b006fec6119bf35b13efdd31031d924a3d92610f2da94ffe961`。boot 仍是内核 `#27`，设备树里补了 1 kΩ 的电池 ID，镜像在 `phase1/boot-27-battery-id.img`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
 
 阶段 1 留下、还没做的：没有 Gatekeeper。manifest 里的 `radio@1.1` 没有进程注册。
 
@@ -42,7 +42,7 @@
 2. 系统导航。已通过。三键导航栏和全面屏手势都能返回、回桌面、打开最近任务。这台手机没有实体导航键。细节在「实现笔记」。
 3. 触控。已通过，见上面。
 4. USB。已通过。文件两个方向都拷过。充电、MTP、PTP 能切换。内核仍是传统 `android_usb`，不是 ConfigFS。adb 继续用阻塞读写（`ro.adb.nonblocking_ffs=0`，`sys.usb.ffs.aio_compat=true`）。U 盘按 fstab 的 `usbdisk` 挂，这次没插，不挡这一项。细节在「实现笔记」。
-5. Wi-Fi。`wlan.ko` 加载，固件来自这台机器，能扫描、连接、拿到地址，`ping` 通。supplicant 用 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。
+5. Wi-Fi。已通过。`wlan.ko` 加载，固件来自这台机器的 `/firmware/image`。扫描后连上 `ZCXYYY0824`，地址 `10.0.0.108`，`ping` 通。supplicant 是 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。细节在「实现笔记」。
 6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。
 7. 蓝牙。开关、扫描、配对、A2DP 播放。固件读 `mmcblk0p12`，不另刷这个分区。耳机上的通话留到收口之后。
 8. 传感器。加速度计、陀螺仪、磁力计、气压、光感、距离、霍尔都有事件。persist 里的校准不动。阶段 0 探到的是 ST LSM6DS3、`yas537_mag`、`alps_pressure`，加上光感、距离、霍尔。
@@ -102,6 +102,20 @@
 
 开机后 `init.svc.vendor.usb-hal-1-0=running`。`dumpsys usb` 里 `port0` 是 connected，`current_mode=ufp`，`data_role=device`，`power_role=sink`。切到 MTP 后是 `18d1:4ee2`，功能 `mtp,ffs`，`/dev/mtp_usb` 是 `0660 root mtp`。主机把一份文件拷进内部存储，手机上读到的内容和主机一致；再从手机拷回主机，两边一致。测完把这两个文件删了。PTP 是 `18d1:4ee6`，功能 `ptp,ffs`。充电是 `18d1:4ee7`，功能 `ffs`，这时 `usb/online` 仍是 1。最后把解锁后的功能设成 MTP，当前是 `mtp,adb`。没有插 U 盘。
 
+2026-10-29 插进来的充电和电量。电量停在 50% 很久，AIDA64 上看是 4.000V。内核里 `battery_type` 是 `Unknown Battery`，`charge_full_design` 是 0，温度是 250（25.0℃）。电压节点本身在动，大约 3.99V 到 4.06V，AIDA64 把靠近 4000 mV 的数显示成 4.000V。电量计的原始 SOC 大约是 69，驱动因为没配上电池曲线，对外一直报默认的 50。
+
+电池 ID 读数是 980Ω。这颗内核按 kΩ 乘 1000 去对曲线。Compal PM9X 的表里只有 0Ω、10 kΩ、100 kΩ，980Ω 对不上。10 kΩ 那份是 3040 mAh、充满 4.4V 的 `apak-3000mah-10k`。在同一份曲线上加了 ID `1`（1 kΩ，15% 以内含 980Ω）。没有换内核二进制，`uname` 仍是 `3.10.108-sambar+ #27`。只改了 boot 里 PVT 那份 DTB 的这个属性。system 的 fstab 路径仍是 `soc.0`。直接 `mka bootimage` 会把 `second_addr` 写成 0，并且当前源码树编出来的 DTB 会丢掉 `soc.0`，这两种都会回到 fastboot。源码里已经把 `soc.0` 和 1 kΩ 写回去。刷进去的是 `phase1/boot-27-battery-id.img`，SHA256 `32c51bffefad2d9accd8783151afe9d2c86be321c6cb05875710d76c708b40ce`。刷之前的 `#27` 在 `phase1/boot-27-before-battery.img`。
+
+开机后日志是 `apak-3000mah-10k found`，`Battery SOC: 68`。`dumpsys battery` 的 level 是 68，电压 3985 mV，后来电压到 4022 mV。`charge_full_design` 是 3124 mAh，`charge_full` 是 2940 mAh，`voltage_max_design` 是 4.4V。状态是 Charging。接电脑时 USB 类型是 SDP，输入上限 500 mA，这是这颗充电芯片对标准 USB 口的上限，电池电流在大约 ±80 mA 之间，屏幕开着时大部分 500 mA 被系统用掉。插墙充时走的是另一条电流，不按这 500 mA。温度读数仍是 25.0℃。
+
+2026-10-29 第 5 项。`wlan.ko` 在镜像里，没有加载。没有 `wpa_supplicant`，也没有 Wi-Fi HAL。这台机器的固件分区是 2015-11-27 的 `qwlan30.bin`、`bdwlan30.bin`、`otp30.bin`、`utf30.bin`，走 PCIe 上的 QCA6174。`/firmware/image` 里没有 `wcnss.b0*`，那些旧链接用不上。没有把一加 2 或别的板子的固件拷进 system。
+
+`WCNSS_qcom_cfg.ini` 用这棵树里已有的那份，放到 `/system/etc/wifi/`，原来的链接指到这里。没有这份 ini 时，`insmod` 打出 `Failed to probe WLAN`。放上之后驱动起来，`wlan0` 的地址是 `00:a0:c6:eb:5c:6f`。persist 里没有 `wlan_mac.bin`，驱动用芯片上的地址，没有另写一份。`bdwlan30.b00` 不存在，驱动改用分区上的 `bdwlan30.bin`。`evicted30.bin` 是 codeswap，这块板子没有，缺了不影响加载。`/proc/config.gz` 仍是 `CONFIG_QCA_CLD_WLAN=m`。
+
+qcwcn HAL 和 HIDL supplicant 装进 vendor。`android.hardware.wifi@1.4` 和 `android.hardware.wifi.supplicant@1.3` 各有自己的 VINTF 片段，没有再写进主 manifest。HAL 以 `wifi` 用户跑。`/sys/module/wlan/parameters/fwpath` 是 `0644 root`，它写不进去，STA 接口创建失败，Wi-Fi 马上被关掉。`insmod` 本身已经把 `wlan0` 带起来，所以不设 `WIFI_DRIVER_FW_PATH_*`。supplicant 要把配置拷到 `/data/vendor/wifi/wpa/`，这个目录原来没有，拷贝失败后接口也建不起来。`init.sambar.rc` 在 `post-fs-data` 里建这个目录。
+
+稀疏文件 1606476308 字节，SHA256 `1b37e0850b017b006fec6119bf35b13efdd31031d924a3d92610f2da94ffe961`，展开后正好 3221225472。四段 Writing 都是 OKAY，总时间 72.4 秒。只刷了 system，boot 仍是 `#27`。没有格式化 userdata。刷之前删掉手建的 `/data/vendor/wifi`，重启后 init 重新建好。`lshal` 里 `IWifi/default` 和 `ISupplicant/default` 都在。`wlan.ko` 已加载。扫描能看到周围网络。连上 `ZCXYYY0824`，5 GHz，地址 `10.0.0.108/24`，`ping 1.1.1.1` 三包都通。
+
 ## 事件
 
 - 2026-10-29：第 1 项。`ro.hardware.egl=adreno`，用的是这台机器自己的 Adreno 用户态和 `a420_pm4.fw`、`a420_pfp.fw`。system SHA256 `977197292482f6e18bd0647307bb3e42e30848d60fb3a20880433d9aef5c20b0`。只刷了 system，重启一次。Adreno 430，OpenGL ES 3.1，横条没有了，背光能灭能亮。细节在「实现笔记」。
@@ -110,3 +124,5 @@
 - 2026-10-29：开机后应用过几秒闪退，再重启进不了系统。`system_server` 在任务快照上 abort，因为 `Bitmap.copy(HARDWARE)` 被改成了软件位图。已改回硬件位图，并在 `on boot` 停掉 serial console。system SHA256 `165d579930970b4633c5c90feb1837740dd593deed41ea6f4035890048733b60`。只刷了 system。重启后进了系统，设置不再被系统拖死，串口通知没有了。细节在「实现笔记」。
 - 2026-10-29：第 2 项。`qemu.hw.mainkeys=0`，软件导航栏出现。三键和全面屏手势都能返回、回桌面、打开最近任务。system SHA256 `64075779f342065245803419a616466eed36235701248775b18c8f466d2688b8`。只刷了 system。细节在「实现笔记」。
 - 2026-10-29：第 4 项。USB HAL 报 `port0` 为设备口，`init.sambar.rc` 按传统 `android_usb` 写 MTP 和 PTP。充电、MTP、PTP 都能切换，文件两个方向都拷过。system SHA256 `f54b6630c4524ccce1032d97314e779d7bdad8b79ad299a053594c7aa48fed6e`。只刷了 system。细节在「实现笔记」。
+- 2026-10-29：电量停在 50%、AIDA64 显示 4.000V。电池 ID 980Ω 对不上曲线，驱动把电量固定成 50。PVT 设备树给 `apak-3000mah-10k` 加了 1 kΩ。内核仍是 `#27`。开机后电量 68%，电压大约 4.0V，充满容量 3124 mAh。电脑 USB 仍是 500 mA。细节在「实现笔记」。
+- 2026-10-29：第 5 项。`wlan.ko` 由 qcwcn HAL 加载，固件是这台机器 `/firmware/image` 上的 `qwlan30.bin` 和 `bdwlan30.bin`。supplicant 是 HIDL。连上 `ZCXYYY0824`，地址 `10.0.0.108`，`ping` 通。内核仍是 `#27`，`CONFIG_QCA_CLD_WLAN=m`。system SHA256 `1b37e0850b017b006fec6119bf35b13efdd31031d924a3d92610f2da94ffe961`。只刷了 system。细节在「实现笔记」。
