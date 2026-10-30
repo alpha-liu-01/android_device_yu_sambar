@@ -1,0 +1,22 @@
+// This phone has no /sys/class/dual_role_usb, so the AOSP USB HAL is not
+// packaged. Without a port that reports device mode, Settings disables
+// every USB function. This service reports the single sink port from the
+// USB charger supply.
+
+cc_binary {
+    name: "android.hardware.usb@1.0-service.sambar",
+    defaults: ["hidl_defaults"],
+    relative_install_path: "hw",
+    vendor: true,
+    srcs: [
+        "service.cpp",
+        "Usb.cpp",
+    ],
+    shared_libs: [
+        "libbase",
+        "libhidlbase",
+        "liblog",
+        "libutils",
+        "android.hardware.usb@1.0",
+    ],
+}

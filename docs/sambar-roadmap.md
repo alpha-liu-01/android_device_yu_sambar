@@ -185,7 +185,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 | modem 分区 80 MiB，modemst1 / modemst2 / fsg 各 4 MiB | 第 9 项。继续用这台机器自己的分区 |
 | 相机 `imx230` 与 `ov8865`，`BOARD_QTI_CAMERA_32BIT_ONLY`，`persist.camera.HAL3.enabled=0` | 第 12 项。维持 HAL1 |
 | Silead，`silead-vinput-keypad`，`fingerprintd` 与 `fpsvcd` | 第 13 项。不换成一加 2 的指纹 |
-| USB 在 Android 里是 `2a96:3014`，bootloader 是 `2a96:301c` | 第 4 项 |
+| USB 在 Android 里是 `2a96:3014`，bootloader 是 `2a96:301c` | 第 4 项。已通过。现在的 gadget 用 `18d1` |
 | eMMC，无 A/B，无 vendor 分区 | 不单列。system 仍是 3 GiB |
 
 阶段 0 的表没有单独写振动马达。阶段 1 为了让 `system_server` 过阶段 480，已经装了 `vibrator.default`。用户确认马达是好的，第 10 项已通过。也没有实体导航键：`gpio-keys.kl` 只有音量加，`qpnp_pon.kl` 只有电源和音量减。虚拟导航键和全面屏手势是第 2 项，已通过。编解码不是阶段 0 的探针。格力把它算进日用收口，这边放在第 11 项。
@@ -195,7 +195,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 1. 显示能看。已通过。Adreno 430，OpenGL ES 3.1，桌面没有横条，背光能灭能亮。记录在 `docs/sambar-phase-2.md`。
 2. 系统导航。已通过。三键导航栏和全面屏手势都能返回、回桌面、打开最近任务。记录在 `docs/sambar-phase-2.md`。
 3. 触控。已通过。用户确认能用。固件仍是 `A4_15_2.2_AA.fw`。清盘或换 GPU 之后如果触摸没了，再回到这项。
-4. USB。文件传输两个方向都能拷文件。充电、MTP、PTP 能切换。现在 `init.sambar.rc` 把 `sys.usb.config` 钉成 `adb`，这只是阶段 1 的调试口。这颗内核是传统 `android_usb`，不是 ConfigFS。adb 继续用阻塞读写（`ro.adb.nonblocking_ffs=0`，`sys.usb.ffs.aio_compat=true`）。插了 U 盘时按 fstab 的 `usbdisk` 挂上；阶段 0 没有插过 U 盘，挂不上不挡这一项。
+4. USB。已通过。充电、MTP、PTP 能切换，文件两个方向都拷过。内核仍是传统 `android_usb`。记录在 `docs/sambar-phase-2.md`。
 5. Wi-Fi。`wlan.ko` 加载，固件来自这台机器，能扫描、连接、拿到地址，`ping` 通。supplicant 用 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。
 6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。
 7. 蓝牙。开关、扫描、配对、A2DP 播放。固件读 `mmcblk0p12`，不另刷这个分区。耳机上的通话留到收口之后。

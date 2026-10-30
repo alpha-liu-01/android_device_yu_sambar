@@ -162,3 +162,15 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.boot@1.0-impl \
     bootctrl.qcom
+
+# No dual_role_usb or type-c class. The AOSP USB HAL is not packaged.
+# Settings greys out every function until some service reports one port
+# in device mode. This one reads the USB charger supply. Declared in the
+# main manifest only; a second VINTF fragment is refused by hwservicemanager.
+PRODUCT_PACKAGES += \
+    android.hardware.usb@1.0-service.sambar
+
+# host_init_verifier opens rc files with O_NOFOLLOW, so this cannot be the
+# device-tree symlink. The absolute path is the real file.
+PRODUCT_COPY_FILES += \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/usb/android.hardware.usb@1.0-service.sambar.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.usb@1.0-service.sambar.rc

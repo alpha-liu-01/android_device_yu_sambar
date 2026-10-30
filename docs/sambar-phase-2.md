@@ -2,11 +2,11 @@
 
 日期：2026-10-29。路线图是 `docs/sambar-roadmap.md`。阶段 1 已完成，记录在 `docs/sambar-phase-1.md`。本文记阶段 2 的顺序和约束。实现笔记和事件先空着，做的时候再补。
 
-完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
+完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB 和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
 
-当前 system SHA256 `64075779f342065245803419a616466eed36235701248775b18c8f466d2688b8`。boot 仍是内核 `#27`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
+当前 system SHA256 `f54b6630c4524ccce1032d97314e779d7bdad8b79ad299a053594c7aa48fed6e`。boot 仍是内核 `#27`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
 
-阶段 1 留下、还没做的：USB 被 init 钉成只有 adb。没有 Gatekeeper。manifest 里的 `radio@1.1` 没有进程注册。
+阶段 1 留下、还没做的：没有 Gatekeeper。manifest 里的 `radio@1.1` 没有进程注册。
 
 ## 本阶段禁止
 
@@ -41,7 +41,7 @@
 1. 显示能看。已通过。Adreno 430，OpenGL ES 3.1，桌面壁纸没有横条。亮度条和电源键都能改背光。细节在「实现笔记」。
 2. 系统导航。已通过。三键导航栏和全面屏手势都能返回、回桌面、打开最近任务。这台手机没有实体导航键。细节在「实现笔记」。
 3. 触控。已通过，见上面。
-4. USB。文件传输两个方向都能拷文件。充电、MTP、PTP 能切换。现在 `init.sambar.rc` 把 `sys.usb.config` 钉成 `adb`，这只是阶段 1 的调试口。这颗内核是传统 `android_usb`，不是 ConfigFS。adb 继续用阻塞读写（`ro.adb.nonblocking_ffs=0`，`sys.usb.ffs.aio_compat=true`）。插了 U 盘时按 fstab 的 `usbdisk` 挂上。阶段 0 没有插过 U 盘，挂不上不挡这一项。
+4. USB。已通过。文件两个方向都拷过。充电、MTP、PTP 能切换。内核仍是传统 `android_usb`，不是 ConfigFS。adb 继续用阻塞读写（`ro.adb.nonblocking_ffs=0`，`sys.usb.ffs.aio_compat=true`）。U 盘按 fstab 的 `usbdisk` 挂，这次没插，不挡这一项。细节在「实现笔记」。
 5. Wi-Fi。`wlan.ko` 加载，固件来自这台机器，能扫描、连接、拿到地址，`ping` 通。supplicant 用 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。
 6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。
 7. 蓝牙。开关、扫描、配对、A2DP 播放。固件读 `mmcblk0p12`，不另刷这个分区。耳机上的通话留到收口之后。
@@ -94,6 +94,14 @@
 
 重启后 `qemu.hw.mainkeys=0`，出现 `NavigationBar0`，范围 `[0,2392][1440,2560]`。三键是左边返回、中间主页、右边最近任务。用户在设置里改成全面屏手势之后，返回、回桌面、最近任务也能用，再切回三键同样可以。脚本点按发生在已经切到手势之后，点在三键坐标上，那一次不算失败。
 
+2026-10-29 第 4 项。设置里 USB 模式是灰的，adb 本身是好的。这台机器没有 `/sys/class/dual_role_usb`、`typec`、`extcon`，没有进程向 `UsbPortManager` 报一个已连接的设备口。另外 `init.sambar.rc` 在 `on boot` 里把 `sys.usb.config` 写成 `adb`。通用的 `configfs=0` 规则没有 MTP 和 PTP。当时仅有的 `mtp,adb` 规则把功能写成 `adb`、产品号写成 `4EE7`，所以就算属性改了，gadget 仍是只有 adb。
+
+`android.hardware.usb@1.0-service.sambar` 报一个口 `port0`。线还插着时读 `/sys/class/power_supply/usb/online`，模式 UFP、数据角色 device、电源角色 sink。`supportedModes` 和当前模式相同，三个 `canChange` 都是 false。这颗内核不是 ConfigFS，`sys.usb.configfs` 保持 0。`init.sambar.rc` 不再改 `sys.usb.config`。`mtp`、`mtp,adb`、`ptp`、`ptp,adb` 按传统 `android_usb` 写功能名和 Google 产品号：`4EE1`、`4EE2`、`4EE5`、`4EE6`。`f_ffs` 的别名仍是 `adb`，读回来是 `ffs`。调试开着时，充电这一项就是只有 adb，产品号 `4EE7`，通用规则已经会写。`rndis` 和 `midi` 也写了对应规则，这次没有单独验收。主 manifest 里声明这个 HAL，没有再放第二份 VINTF 片段。`ro.adb.nonblocking_ffs=0` 和 `sys.usb.ffs.aio_compat=true` 没动。
+
+稀疏文件 1593344532 字节，SHA256 `f54b6630c4524ccce1032d97314e779d7bdad8b79ad299a053594c7aa48fed6e`，展开后正好 3221225472。三段 Writing 都是 OKAY，总时间 71.7 秒。只刷了 system，boot 仍是 `#27`。没有格式化 userdata。然后重启了一次。
+
+开机后 `init.svc.vendor.usb-hal-1-0=running`。`dumpsys usb` 里 `port0` 是 connected，`current_mode=ufp`，`data_role=device`，`power_role=sink`。切到 MTP 后是 `18d1:4ee2`，功能 `mtp,ffs`，`/dev/mtp_usb` 是 `0660 root mtp`。主机把一份文件拷进内部存储，手机上读到的内容和主机一致；再从手机拷回主机，两边一致。测完把这两个文件删了。PTP 是 `18d1:4ee6`，功能 `ptp,ffs`。充电是 `18d1:4ee7`，功能 `ffs`，这时 `usb/online` 仍是 1。最后把解锁后的功能设成 MTP，当前是 `mtp,adb`。没有插 U 盘。
+
 ## 事件
 
 - 2026-10-29：第 1 项。`ro.hardware.egl=adreno`，用的是这台机器自己的 Adreno 用户态和 `a420_pm4.fw`、`a420_pfp.fw`。system SHA256 `977197292482f6e18bd0647307bb3e42e30848d60fb3a20880433d9aef5c20b0`。只刷了 system，重启一次。Adreno 430，OpenGL ES 3.1，横条没有了，背光能灭能亮。细节在「实现笔记」。
@@ -101,3 +109,4 @@
 - 2026-10-29：清盘后的那次开机停在第一屏。`vold` 在 `needsCheckpoint()` 里等 `IBootControl`，锁不放，`setListener` 不返回。装上 `bootctrl.qcom` 和 `android.hardware.boot@1.0-impl`。不写 misc。细节在「实现笔记」。
 - 2026-10-29：开机后应用过几秒闪退，再重启进不了系统。`system_server` 在任务快照上 abort，因为 `Bitmap.copy(HARDWARE)` 被改成了软件位图。已改回硬件位图，并在 `on boot` 停掉 serial console。system SHA256 `165d579930970b4633c5c90feb1837740dd593deed41ea6f4035890048733b60`。只刷了 system。重启后进了系统，设置不再被系统拖死，串口通知没有了。细节在「实现笔记」。
 - 2026-10-29：第 2 项。`qemu.hw.mainkeys=0`，软件导航栏出现。三键和全面屏手势都能返回、回桌面、打开最近任务。system SHA256 `64075779f342065245803419a616466eed36235701248775b18c8f466d2688b8`。只刷了 system。细节在「实现笔记」。
+- 2026-10-29：第 4 项。USB HAL 报 `port0` 为设备口，`init.sambar.rc` 按传统 `android_usb` 写 MTP 和 PTP。充电、MTP、PTP 都能切换，文件两个方向都拷过。system SHA256 `f54b6630c4524ccce1032d97314e779d7bdad8b79ad299a053594c7aa48fed6e`。只刷了 system。细节在「实现笔记」。
