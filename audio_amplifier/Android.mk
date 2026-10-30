@@ -37,5 +37,8 @@ LOCAL_CFLAGS := -Wno-unused-parameter
 LOCAL_MODULE := audio_amplifier.msm8994
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_MODULE_TAGS := optional
+# The audio service is 32-bit. This module is loaded into that process.
+LOCAL_MULTILIB := 32
+LOCAL_VENDOR_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)

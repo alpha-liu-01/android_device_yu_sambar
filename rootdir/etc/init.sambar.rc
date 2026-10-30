@@ -30,6 +30,18 @@ on post-fs-data
     mkdir /data/vendor/wifi/wpa 0770 wifi wifi
     mkdir /data/vendor/wifi/wpa/sockets 0770 wifi wifi
 
+# Firmware is mounted by the fs trigger above. The WCD codec enumerates
+# only after the ADSP is up, and the sound card probe waits on that codec.
+# audioserver is class main, so this oneshot finishes first.
+service sambar-audio-card /system/bin/sh /vendor/bin/sambar-audio-card
+    user root
+    group root
+    oneshot
+    disabled
+
+on post-fs
+    start sambar-audio-card
+
 # The generic configfs=0 rules only program adb and accessory. This kernel
 # is the legacy android_usb gadget. f_ffs aliases "adb", so a composition
 # that contains adb is written as "mtp,adb" and the driver binds ffs.

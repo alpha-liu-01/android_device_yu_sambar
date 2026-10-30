@@ -50,6 +50,14 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/audio/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     $(LOCAL_PATH)/audio/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
     $(LOCAL_PATH)/audio/audio_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy.conf \
+    $(LOCAL_PATH)/audio/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
+    frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
+    frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml \
+    frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
+    frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
+    frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
+    $(LOCAL_PATH)/audio/media_codecs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs.xml \
+    frameworks/av/media/libstagefright/data/media_codecs_google_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_google_audio.xml \
     $(LOCAL_PATH)/audio/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml
 
 PRODUCT_PACKAGES += \
@@ -193,3 +201,33 @@ PRODUCT_COPY_FILES += \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/wifi/WCNSS_qcom_cfg.ini:$(TARGET_COPY_OUT_SYSTEM)/etc/wifi/WCNSS_qcom_cfg.ini \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/wifi/wpa_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/wpa_supplicant_overlay.conf \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/wifi/p2p_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/p2p_supplicant_overlay.conf
+
+# Audio. The machine driver in kernel #27 asks for a codec named
+# tfa98xx.5-0036. This phone's TFA9887 answers at i2c-6 address 0x34 and
+# is programmed by libtfa9887, which opens /dev/i2c-6 and reads
+# /system/etc/tfa9887.cnt. tfa_stub.ko only registers that codec name and
+# the three pinctrl states the machine driver looks up. The acdb files
+# are this phone's. The loader reads /etc/acdbdata/MTP/.
+PRODUCT_PACKAGES += \
+    audio.primary.msm8994 \
+    audio_amplifier.msm8994
+
+SAMBAR_BLOB := /run/media/alpha/YMTC/sambar/blobs/system
+PRODUCT_COPY_FILES += \
+    $(SAMBAR_BLOB)/lib/libtfa9887.so:$(TARGET_COPY_OUT_VENDOR)/lib/libtfa9887.so \
+    $(SAMBAR_BLOB)/vendor/lib/libacdbloader.so:$(TARGET_COPY_OUT_VENDOR)/lib/libacdbloader.so \
+    $(SAMBAR_BLOB)/vendor/lib/libacdb-fts.so:$(TARGET_COPY_OUT_VENDOR)/lib/libacdb-fts.so \
+    $(SAMBAR_BLOB)/vendor/lib/libacdbrtac.so:$(TARGET_COPY_OUT_VENDOR)/lib/libacdbrtac.so \
+    $(SAMBAR_BLOB)/vendor/lib/libaudcal.so:$(TARGET_COPY_OUT_VENDOR)/lib/libaudcal.so \
+    $(SAMBAR_BLOB)/vendor/lib/libadiertac.so:$(TARGET_COPY_OUT_VENDOR)/lib/libadiertac.so \
+    $(SAMBAR_BLOB)/vendor/lib/libdiag.so:$(TARGET_COPY_OUT_VENDOR)/lib/libdiag.so \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/tfa9887.cnt:$(TARGET_COPY_OUT_SYSTEM)/etc/tfa9887.cnt \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/acdb/Bluetooth_cal.acdb:$(TARGET_COPY_OUT_SYSTEM)/etc/acdbdata/MTP/Bluetooth_cal.acdb \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/acdb/General_cal.acdb:$(TARGET_COPY_OUT_SYSTEM)/etc/acdbdata/MTP/General_cal.acdb \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/acdb/Global_cal.acdb:$(TARGET_COPY_OUT_SYSTEM)/etc/acdbdata/MTP/Global_cal.acdb \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/acdb/Handset_cal.acdb:$(TARGET_COPY_OUT_SYSTEM)/etc/acdbdata/MTP/Handset_cal.acdb \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/acdb/Hdmi_cal.acdb:$(TARGET_COPY_OUT_SYSTEM)/etc/acdbdata/MTP/Hdmi_cal.acdb \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/acdb/Headset_cal.acdb:$(TARGET_COPY_OUT_SYSTEM)/etc/acdbdata/MTP/Headset_cal.acdb \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/acdb/Speaker_cal.acdb:$(TARGET_COPY_OUT_SYSTEM)/etc/acdbdata/MTP/Speaker_cal.acdb \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/kernel-modules/tfa-stub/tfa_stub.ko:$(TARGET_COPY_OUT_VENDOR)/lib/modules/tfa_stub.ko \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/audio/sambar-audio-card:$(TARGET_COPY_OUT_VENDOR)/bin/sambar-audio-card

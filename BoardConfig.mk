@@ -92,6 +92,8 @@ TARGET_HAS_MEMFD_BACKPORT := true
 
 # QCOM
 BOARD_USES_QCOM_HARDWARE := true
+# Builds audio.primary.msm8994 from hardware/qcom-caf/msm8994.
+BOARD_USES_ALSA_AUDIO := true
 
 # SELinux
 include device/qcom/sepolicy-legacy/sepolicy.mk

@@ -71,6 +71,9 @@ typedef struct tfa9887_amplifier {
     bool on;
     int mode;
     bool in_voice_call;
+    bool pcm_ready;
+    bool watching;
+    uint32_t out_devices;
 } tfa9887_amplifier_t;
 
 #define QUAT_MI2S_CLK_CTL "QUAT_MI2S Clock"
@@ -125,42 +128,48 @@ void *write_dummy_data(void *param)
 
     if (quat_mi2s_interface_en(true)) {
         ALOGE("Failed to enable QUAT_MI2S_RX Audio Mixer MultiMedia1");
-        return NULL;
+        goto err_signal;
     }
 
     pcm = pcm_open(0, 0, PCM_OUT | PCM_MONOTONIC, &config);
     if (!pcm || !pcm_is_ready(pcm)) {
         ALOGE("pcm_open failed: %s", pcm_get_error(pcm));
-        if (pcm) {
-            goto err_close_pcm;
-        }
-        goto err_disable_quat;
+        if (pcm)
+            pcm_close(pcm);
+        quat_mi2s_interface_en(false);
+        goto err_signal;
     }
 
     size = DEEP_BUFFER_OUTPUT_PERIOD_SIZE * 8;
     buffer = calloc(size, 1);
     if (!buffer) {
         ALOGE("failed to allocate buffer");
-        goto err_close_pcm;
+        pcm_close(pcm);
+        quat_mi2s_interface_en(false);
+        goto err_signal;
     }
 
-    do {
-        if (pcm_write(pcm, buffer, size)) {
-            ALOGE("pcm_write failed");
-        }
-        pthread_mutex_lock(&tfa9887->mutex);
-        tfa9887->writing = true;
-        pthread_cond_signal(&tfa9887->cond);
-        pthread_mutex_unlock(&tfa9887->mutex);
-    } while (tfa9887->calibrating);
+    pthread_mutex_lock(&tfa9887->mutex);
+    tfa9887->pcm_ready = true;
+    tfa9887->writing = true;
+    pthread_cond_signal(&tfa9887->cond);
+    pthread_mutex_unlock(&tfa9887->mutex);
 
-err_free:
+    while (tfa9887->calibrating) {
+        if (pcm_write(pcm, buffer, size))
+            ALOGE("pcm_write failed");
+    }
+
     free(buffer);
-err_close_pcm:
     pcm_close(pcm);
-err_disable_quat:
     quat_mi2s_interface_en(false);
-    ALOGV("--%s:%d", __func__, __LINE__);
+    return NULL;
+
+err_signal:
+    pthread_mutex_lock(&tfa9887->mutex);
+    tfa9887->writing = true;
+    pthread_cond_signal(&tfa9887->cond);
+    pthread_mutex_unlock(&tfa9887->mutex);
     return NULL;
 }
 
@@ -192,7 +201,8 @@ static int amp_dev_close(hw_device_t *device)
     if (tfa9887) {
         if (tfa9887->mixer_fd >= 0)
             close(tfa9887->mixer_fd);
-        pthread_join(tfa9887->watch_thread, NULL);
+        if (tfa9887->watching)
+            pthread_join(tfa9887->watch_thread, NULL);
         pthread_cond_destroy(&tfa9887->cond);
         pthread_mutex_destroy(&tfa9887->mutex);
         dlclose(tfa9887->lib_ptr);
@@ -212,7 +222,8 @@ static int amp_calibrate(tfa9887_amplifier_t *tfa9887)
         pthread_cond_wait(&tfa9887->cond, &tfa9887->mutex);
     }
     pthread_mutex_unlock(&tfa9887->mutex);
-    tfa9887->calibrate();
+    if (tfa9887->pcm_ready)
+        tfa9887->calibrate();
     tfa9887->calibrating = false;
     pthread_join(write_thread, NULL);
     return 0;
@@ -295,8 +306,13 @@ static int amp_init(tfa9887_amplifier_t *tfa9887)
     }
 
     if (i == elist.count) {
-        ALOGE("could not find %s", QUAT_MI2S_CLK_CTL);
-        goto fail;
+        /* This kernel has no "QUAT_MI2S Clock" control. The stream
+         * callbacks below turn the amplifier on after the port starts. */
+        ALOGI("no %s control", QUAT_MI2S_CLK_CTL);
+        free(eid);
+        close(tfa9887->mixer_fd);
+        tfa9887->mixer_fd = -1;
+        return 0;
     }
 
     if (ioctl(tfa9887->mixer_fd, SNDRV_CTL_IOCTL_SUBSCRIBE_EVENTS, &subscribe) < 0) {
@@ -305,6 +321,7 @@ static int amp_init(tfa9887_amplifier_t *tfa9887)
     }
 
     pthread_create(&tfa9887->watch_thread, NULL, amp_watch, tfa9887);
+    tfa9887->watching = true;
 
     return 0;
 fail:
@@ -313,6 +330,69 @@ fail:
     if (tfa9887->mixer_fd >= 0)
         close(tfa9887->mixer_fd);
     return -ENODEV;
+}
+
+static bool is_speaker_out(uint32_t devices)
+{
+    switch (devices) {
+    case SND_DEVICE_OUT_SPEAKER:
+    case SND_DEVICE_OUT_SPEAKER_REVERSE:
+    case SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES:
+    case SND_DEVICE_OUT_VOICE_SPEAKER:
+    case SND_DEVICE_OUT_SPEAKER_AND_HDMI:
+    case SND_DEVICE_OUT_SPEAKER_PROTECTED:
+    case SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static void speaker_set(tfa9887_amplifier_t *tfa9887, bool enable)
+{
+    int mode;
+
+    pthread_mutex_lock(&tfa9887->mutex);
+    if (enable && !tfa9887->on) {
+        mode = tfa9887->in_voice_call ? AMP_EQ_VOICE : tfa9887->mode;
+        tfa9887->speaker_on(mode);
+        tfa9887->on = true;
+    } else if (!enable && tfa9887->on) {
+        tfa9887->speaker_off();
+        tfa9887->on = false;
+    }
+    pthread_mutex_unlock(&tfa9887->mutex);
+}
+
+static int amp_set_output_devices(struct amplifier_device *device,
+        uint32_t devices)
+{
+    tfa9887_amplifier_t *tfa9887 = (tfa9887_amplifier_t *) device;
+    tfa9887->out_devices = devices;
+    return 0;
+}
+
+static int amp_output_stream_start(struct amplifier_device *device,
+        struct audio_stream_out *stream, bool offload)
+{
+    tfa9887_amplifier_t *tfa9887 = (tfa9887_amplifier_t *) device;
+
+    (void) stream;
+    (void) offload;
+    if (is_speaker_out(tfa9887->out_devices))
+        speaker_set(tfa9887, true);
+    return 0;
+}
+
+static int amp_output_stream_standby(struct amplifier_device *device,
+        struct audio_stream_out *stream)
+{
+    tfa9887_amplifier_t *tfa9887 = (tfa9887_amplifier_t *) device;
+
+    (void) stream;
+    if (is_speaker_out(tfa9887->out_devices))
+        speaker_set(tfa9887, false);
+    return 0;
 }
 
 int amp_set_mode(struct amplifier_device *device, audio_mode_t mode)
@@ -347,6 +427,9 @@ static int amp_module_open(const hw_module_t *module, const char *name,
     tfa9887->amp.common.close = amp_dev_close;
     tfa9887->amp.set_mode = amp_set_mode;
     tfa9887->amp.set_parameters = amp_set_parameters;
+    tfa9887->amp.set_output_devices = amp_set_output_devices;
+    tfa9887->amp.output_stream_start = amp_output_stream_start;
+    tfa9887->amp.output_stream_standby = amp_output_stream_standby;
     tfa9887->on = false;
     tfa9887->mode = AMP_EQ_FLAT;
 

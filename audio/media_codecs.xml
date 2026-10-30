@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  The OMX store refuses the whole codec list when this file is missing.
+  MediaCodecList then never asks the software Codec2 store, so the AAC
+  encoder the recorder needs is invisible. Hardware Venus entries stay in
+  configs/media_codecs.xml until that item.
+-->
+<MediaCodecs>
+    <Include href="media_codecs_google_audio.xml" />
+</MediaCodecs>

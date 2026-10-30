@@ -1,0 +1,22 @@
+#!/system/bin/sh
+# Bring up the ADSP, then the name-only codec, then the sound card.
+# The WCD9330 does not enumerate until the ADSP is out of reset, and the
+# machine driver refuses to probe until both that codec and tfa98xx.5-0036
+# are registered.
+
+echo 1 > /sys/kernel/boot_adsp/boot
+
+i=0
+while [ "$i" -lt 100 ]; do
+    if [ -d /sys/bus/platform/devices/tomtom_codec ]; then
+        break
+    fi
+    sleep 0.1
+    i=$((i + 1))
+done
+
+insmod /vendor/lib/modules/tfa_stub.ko 2>/dev/null
+
+if [ ! -e /sys/bus/platform/drivers/msm8994-asoc-snd/fe034000.sound ]; then
+    echo fe034000.sound > /sys/bus/platform/drivers/msm8994-asoc-snd/bind
+fi
