@@ -249,3 +249,30 @@ PRODUCT_COPY_FILES += \
     $(SAMBAR_BLOB)/bin/wcnss_filter:$(TARGET_COPY_OUT_VENDOR)/bin/wcnss_filter \
     $(SAMBAR_BLOB)/vendor/lib64/libdiag.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libdiag.so \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/bluetooth/bdaddr:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth/bdaddr
+
+# Sensors. Kernel #27 has none of these drivers. The modules bind the
+# i2c and hall nodes already in the PVT DTB. This phone's HAL is
+# sensors.msm8994.so; ro.hardware is qcom, so it is installed as
+# sensors.qcom.so. The service rc declares the HIDL interface, so
+# manifest.xml does not declare sensors again. Calibration stays on
+# persist and is not copied into the image.
+PRODUCT_PACKAGES += \
+    android.hardware.sensors@1.0-impl \
+    android.hardware.sensors@1.0-service
+
+PRODUCT_COPY_FILES += \
+    $(SAMBAR_BLOB)/lib64/hw/sensors.msm8994.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/sensors.qcom.so \
+    $(SAMBAR_BLOB)/lib64/libyasalgo.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libyasalgo.so \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/sensors/sambar-sensors:$(TARGET_COPY_OUT_VENDOR)/bin/sambar-sensors \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/kernel-modules/sensors/lsm6ds3.ko:$(TARGET_COPY_OUT_VENDOR)/lib/modules/lsm6ds3.ko \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/kernel-modules/sensors/lsm6ds3_i2c.ko:$(TARGET_COPY_OUT_VENDOR)/lib/modules/lsm6ds3_i2c.ko \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/kernel-modules/sensors/yas537_mag.ko:$(TARGET_COPY_OUT_VENDOR)/lib/modules/yas537_mag.ko \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/kernel-modules/sensors/hsppad038.ko:$(TARGET_COPY_OUT_VENDOR)/lib/modules/hsppad038.ko \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/kernel-modules/sensors/stk3x1x_pm9x.ko:$(TARGET_COPY_OUT_VENDOR)/lib/modules/stk3x1x_pm9x.ko \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/kernel-modules/sensors/hall_sensor.ko:$(TARGET_COPY_OUT_VENDOR)/lib/modules/hall_sensor.ko \
+    frameworks/native/data/etc/android.hardware.sensor.accelerometer.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.accelerometer.xml \
+    frameworks/native/data/etc/android.hardware.sensor.gyroscope.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.gyroscope.xml \
+    frameworks/native/data/etc/android.hardware.sensor.compass.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.compass.xml \
+    frameworks/native/data/etc/android.hardware.sensor.barometer.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.barometer.xml \
+    frameworks/native/data/etc/android.hardware.sensor.light.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.light.xml \
+    frameworks/native/data/etc/android.hardware.sensor.proximity.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.proximity.xml

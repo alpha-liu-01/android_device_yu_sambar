@@ -2,9 +2,9 @@
 
 日期：2026-10-29。路线图是 `docs/sambar-roadmap.md`。阶段 1 已完成，记录在 `docs/sambar-phase-1.md`。本文记阶段 2 的顺序和约束。实现笔记和事件先空着，做的时候再补。
 
-完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi、第 7 项蓝牙和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
+完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi、第 7 项蓝牙、第 8 项传感器和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
 
-当前 system SHA256 `545ddb143e696d8627f99edcd127a975030b13fbdea3764fd579daab08311720`。boot 仍是内核 `#27`，设备树里补了 1 kΩ 的电池 ID，镜像在 `phase1/boot-27-battery-id.img`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
+当前 system SHA256 `baa659f4a5cf2ba871b62cfa154fe601c90db1301fb73bf1bae6c2f762b077d0`。boot 仍是内核 `#27`，设备树里补了 1 kΩ 的电池 ID，镜像在 `phase1/boot-27-battery-id.img`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
 
 阶段 1 留下、还没做的：没有 Gatekeeper。manifest 里的 `radio@1.1` 没有进程注册。
 
@@ -45,7 +45,7 @@
 5. Wi-Fi。已通过。`wlan.ko` 加载，固件来自这台机器的 `/firmware/image`。扫描后连上 `ZCXYYY0824`，地址 `10.0.0.108`，`ping` 通。supplicant 是 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。细节在「实现笔记」。
 6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。整首 MP3 卡顿、FLAC 打不开、音量减键没有上报，记在「先记下、后面再修」，不在这一项里改。
 7. 蓝牙。已通过。开关、扫描、配对、A2DP 播放都做过。固件读 `mmcblk0p12`，没有另刷这个分区。同一首 MP3 在耳机里不卡，是因为这条路不走压缩直通，喇叭上的卡顿还在。FLAC 仍然打不开。耳机上的通话留到收口之后。细节在「实现笔记」。
-8. 传感器。加速度计、陀螺仪、磁力计、气压、光感、距离、霍尔都有事件。persist 里的校准不动。阶段 0 探到的是 ST LSM6DS3、`yas537_mag`、`alps_pressure`，加上光感、距离、霍尔。
+8. 传感器。已通过。加速度计、陀螺仪、磁力计、气压、光感、距离、霍尔都有事件。persist 里的两份校准没有改。阶段 0 探到的是 ST LSM6DS3、`yas537_mag`、`alps_pressure`，加上光感、距离、霍尔。细节在「实现笔记」。
 9. 蜂窝。第一张卡识别、驻网、数据能上网，听筒和免提各打通一次。RIL 用这台机器的 modem 分区和现有 blob。短信要能收发。第二张卡和 VoLTE 不挡。阶段 0 没有读卡槽数量。
 10. 振动。已通过，见上面。
 11. 硬件编解码。视频能播能录一段，音频解码不走软解兜底。Venus 和 ADSP 用现有固件路径。编解码进程崩溃先修这个，再进相机。MP3 走喇叭的压缩直通时放几秒就空几秒，在这一项里修，不要改成永久软解。蓝牙耳机里同一首不卡，那是另一条 PCM 再编码的路，不算这一项过了。FLAC 打不开停在提取器，不和 Venus 绑在一起。细节在「先记下、后面再修」。
@@ -136,6 +136,18 @@ HIDL 服务在拿到地址之前会直接退出（`Open: No Bluetooth Address!`�
 
 开机后 `vendor.qcom.bluetooth.soc=rome`。打开蓝牙，`Bluetooth FW and transport layer are initialized`，`wcnss_filter` 在跑。状态 ON，地址 `A1:A3:17:00:00:00`，名字 YU5050。扫描能看到 `LYWSD03MMC`。用户配对之后耳机里有声音。播放 `洛天依 - 东京不太热.mp3` 时，`bt_a2dp_hw` 的 `A2DP_CTRL_CMD_START` 返回 status 0，`a2dp_aac_encoder` 每 23 ms 吃 4057 字节 PCM。日志里没有 `compress-offload-playback`，也没有 `No space available in compress driver`。喇叭那条路把同一首 MP3 交给 ADSP 的压缩直通，驱动空了就把功放拆掉再接上，所以卡。耳机这条路先把 MP3 解成 PCM，再在蓝牙进程里编成 AAC 送出去，根本不进那条压缩直通。耳机不卡，不说明第 11 项已经好了。同一段时间 FLAC 仍是 `FLACExtractor: end_of_metadata failed`，然后 `GenericSource: source has no track`，和有没有连耳机无关。aptX 的编码库不在镜像里，这次走的是 AAC。耳机上的通话没有测。Wi-Fi 刷完之后仍是 `10.0.0.108`。
 
+2026-10-30 第 8 项。`dumpsys sensorservice` 原来是 `No Sensors on the device`。内核 `#27` 没有这些驱动，`CONFIG_IIO` 也没打开。芯片已经在正在跑的设备树里，只是没有驱动绑上：i2c `15-006b` 是 `st,lsm6ds3`，`15-002e` 是 `qcom,yas537`，`15-0048` 是 `hsppad038`，i2c `7-0048` 是 `stk,stk3x1x`，平台设备 `hall.82` 是 `hall-switch`。气压计的 HAL 名字是 `alps_pressure`，芯片是这颗 Alps HSPPAD038，不是另一颗。源码在 Cyanogen 的 msm8994 树里，是输入子系统的驱动，不走 IIO，也不走格力那套 SLPI。编成模块，对着 `#27` 的 `Module.symvers`，没有重刷 boot。`stk3x1x.c` 和 `stk3x1x_pm9x.c` 都声明 `stk,stk3x1x`，只用 pm9x 那份，光感的输入名才是 `lightsensor-level`。YAS 的 `MODULE_DEVICE_TABLE` 写成了 `yas533_of_match`，表的名字是 `yas537_of_match`，模块编不过，改的是这一处。LSM6DS3 的核和 i2c 拆成两个模块之后，核上没有 `MODULE_LICENSE`，GPL 符号加不进去，补了一行 `GPL`。设备树里 LSM6DS3 没有中断脚，探测日志是 `irq = 0`，所以模块按轮询编，`accel/polling_rate` 和 `gyro/polling_rate` 才在。这和 HAL 要写的节点一致。
+
+这台机器的 HAL 是 `sensors.msm8994.so`，还要 `libyasalgo.so`。`ro.hardware` 是 `qcom`，所以装成 `/vendor/lib64/hw/sensors.qcom.so`。HIDL 用 `android.hardware.sensors@1.0-impl` 和 `@1.0-service`。服务自己的 rc 已经声明了 `ISensors/default`，主 manifest 里原来的 passthrough 拿掉，避免同一条接口登记两次。`init.sambar.rc` 在 `on fs` 里加载这六个模块，赶在 `class hal` 之前，免得 SensorService 把空名单缓存下来。
+
+校准没有改。`/persist/accel_cali.conf` 和 `/persist/gyro_cali.conf` 仍是 16 字节，属主 `system`，时间戳还是 1969-12-31。两个文件第 4 个整数都是 `0xAB`。驱动用固件接口要 `lsm6ds3/accel_cali.conf`，不会自己去读 persist。`on fs` 里做两个符号链接，指回 persist 上的原文件，不把内容拷进镜像。加载之后加速度计偏移是 -88、224、-325，陀螺仪是 -43、55、27，和这两个文件一致。
+
+霍尔不在这份 HAL 的传感器名单里。驱动注册的输入设备叫 `hall_sensor`，事件是 `SW_LID`。原驱动只在沿上报告，盖子一直开着就永远没有事件。模块在探测后读一次 GPIO，这次是开（`hall_sensor: far`），`getevent -S` 的开关位是 0。
+
+稀疏文件 1610986004 字节，SHA256 `baa659f4a5cf2ba871b62cfa154fe601c90db1301fb73bf1bae6c2f762b077d0`，展开后正好 3221225472。四段 Writing 都是 OKAY，总时间 72.4 秒。只刷了 system，boot 仍是 `#27`。没有格式化 userdata，没有刷 persist，也没有刷 bluetooth。然后重启了一次。
+
+重启后六个模块都在，`vendor.sensors-hal-1-0` 是 running。`dumpsys sensorservice` 列出 LSM6DS3 加速度计和陀螺仪、YAS537 磁力计、HSPPAD 气压、SenseTek 光感和距离。加速度计已经在往 SensorService 送事件，静止时大约是 -0.01、0.36、9.56。打开之后陀螺仪、磁力计、气压都有输入事件。光感 `ABS_MISC` 是 15，和 `/sys/als` 读到的 14 lux 一致。距离打开时内核打了 `ps input event=1, ps code = 1225`，人离得远，绝对值不重复报，时间戳还在走。Wi-Fi 刷完之后仍是 `10.0.0.108`。
+
 ## 事件
 
 - 2026-10-29：第 1 项。`ro.hardware.egl=adreno`，用的是这台机器自己的 Adreno 用户态和 `a420_pm4.fw`、`a420_pfp.fw`。system SHA256 `977197292482f6e18bd0647307bb3e42e30848d60fb3a20880433d9aef5c20b0`。只刷了 system，重启一次。Adreno 430，OpenGL ES 3.1，横条没有了，背光能灭能亮。细节在「实现笔记」。
@@ -148,3 +160,4 @@ HIDL 服务在拿到地址之前会直接退出（`Open: No Bluetooth Address!`�
 - 2026-10-29：第 5 项。`wlan.ko` 由 qcwcn HAL 加载，固件是这台机器 `/firmware/image` 上的 `qwlan30.bin` 和 `bdwlan30.bin`。supplicant 是 HIDL。连上 `ZCXYYY0824`，地址 `10.0.0.108`，`ping` 通。内核仍是 `#27`，`CONFIG_QCA_CLD_WLAN=m`。system SHA256 `1b37e0850b017b006fec6119bf35b13efdd31031d924a3d92610f2da94ffe961`。只刷了 system。细节在「实现笔记」。
 - 2026-10-29：整首 MP3 走压缩直通时放几秒就空几秒，放到第 11 项修 ADSP，不改成永久软解。FLAC 在提取器读元数据时失败，文件头是正常的 `fLaC`，不和 Venus 绑在一起。音量减没有输入事件，设备树里没有这个键，下一次改 boot 时补。三件都先不改。细节在「先记下、后面再修」。
 - 2026-10-30：第 7 项。Rome 固件仍在 `mmcblk0p12`，没有刷这个分区。`libbt-vendor` 从 `/bt_firmware/image` 下载，`wcnss_filter` 用这台机器自己的。地址来自 `persist/.bt_nv.bin`。开关、扫描、配对之后耳机里有声音，编码是 AAC。同一首 MP3 在耳机里不卡，因为这条路吃 PCM，不走喇叭的压缩直通。FLAC 仍停在提取器。system SHA256 `545ddb143e696d8627f99edcd127a975030b13fbdea3764fd579daab08311720`。只刷了 system，boot 仍是 `#27`。细节在「实现笔记」。
+- 2026-10-30：第 8 项。内核 `#27` 没有这些驱动，六个模块在开机时加载，没有重刷 boot。HAL 是这台机器的 `sensors.msm8994.so`，装成 `sensors.qcom.so`。加速度计、陀螺仪、磁力计、气压、光感、距离都有事件，霍尔报了一次开盖。`/persist/accel_cali.conf` 和 `gyro_cali.conf` 没有改，驱动通过符号链接读它们。system SHA256 `baa659f4a5cf2ba871b62cfa154fe601c90db1301fb73bf1bae6c2f762b077d0`。只刷了 system。细节在「实现笔记」。

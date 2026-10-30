@@ -1,0 +1,37 @@
+#!/system/bin/sh
+# Kernel #27 does not contain these drivers. Load them before the sensors
+# HAL starts. The calibration files on persist are not rewritten; the
+# firmware loader follows the symlinks below.
+
+mkdir -p /system/etc/firmware/lsm6ds3
+rm -f /system/etc/firmware/lsm6ds3/accel_cali.conf
+rm -f /system/etc/firmware/lsm6ds3/gyro_cali.conf
+ln -s /persist/accel_cali.conf /system/etc/firmware/lsm6ds3/accel_cali.conf
+ln -s /persist/gyro_cali.conf /system/etc/firmware/lsm6ds3/gyro_cali.conf
+
+MOD=/vendor/lib/modules
+insmod $MOD/lsm6ds3.ko
+insmod $MOD/lsm6ds3_i2c.ko
+insmod $MOD/yas537_mag.ko
+insmod $MOD/hsppad038.ko
+insmod $MOD/stk3x1x_pm9x.ko
+insmod $MOD/hall_sensor.ko
+
+# The HIDL service runs as system. These nodes are created root-only.
+for d in /sys/class/input/input*; do
+    name=$(cat "$d/name" 2>/dev/null) || continue
+    case "$name" in
+        "ST LSM6DS3"*|yas537_mag|alps_pressure|lightsensor-level|proximity|hall_sensor)
+            for ev in "$d"/event*; do
+                chmod 666 "/dev/input/$(basename "$ev")" 2>/dev/null
+            done
+            chmod 666 \
+                "$d"/accel/enable "$d"/accel/polling_rate "$d"/accel/scale \
+                "$d"/gyro/enable "$d"/gyro/polling_rate "$d"/gyro/scale \
+                "$d"/enable_device "$d"/pollrate_ms "$d"/full_scale \
+                "$d"/enable "$d"/delay 2>/dev/null
+            ;;
+    esac
+done
+chmod 666 /sys/als/link/driver/enable /sys/als/link/driver/delay \
+    /sys/ps/link/driver/enable /sys/ps/link/driver/delay 2>/dev/null

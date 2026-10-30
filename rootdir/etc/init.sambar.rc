@@ -20,6 +20,8 @@ on fs
     write /sys/class/android_usb/android0/f_ffs/aliases adb
     write /sys/class/android_usb/android0/idVendor 18D1
     write /sys/class/android_usb/android0/iSerial ${ro.serialno}
+    # / is still writable here. The sensors HAL starts later, on boot.
+    start sambar-sensors
 
 # The HIDL supplicant copies its conf here on startup. The directory is
 # not created by the generic rc. Without it, STA setup fails and Wi-Fi
@@ -34,6 +36,14 @@ on post-fs-data
 # only after the ADSP is up, and the sound card probe waits on that codec.
 # audioserver is class main, so this oneshot finishes first.
 service sambar-audio-card /system/bin/sh /vendor/bin/sambar-audio-card
+    user root
+    group root
+    oneshot
+    disabled
+
+# Input drivers for the sensors already described by the PVT DTB.
+# Runs on fs, before class hal, so SensorService does not cache an empty list.
+service sambar-sensors /system/bin/sh /vendor/bin/sambar-sensors
     user root
     group root
     oneshot
