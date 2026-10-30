@@ -94,6 +94,9 @@ TARGET_HAS_MEMFD_BACKPORT := true
 BOARD_USES_QCOM_HARDWARE := true
 # Builds audio.primary.msm8994 from hardware/qcom-caf/msm8994.
 BOARD_USES_ALSA_AUDIO := true
+# QCRIL starts the voice session with vsid 0x11C05000. Without this the
+# HAL ignores call_state and opens the old CS-Voice device instead.
+AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
 
 # SELinux
 include device/qcom/sepolicy-legacy/sepolicy.mk

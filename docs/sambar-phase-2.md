@@ -6,7 +6,7 @@
 
 当前 system SHA256 `baa659f4a5cf2ba871b62cfa154fe601c90db1301fb73bf1bae6c2f762b077d0`。boot 仍是内核 `#27`，设备树里补了 1 kΩ 的电池 ID，镜像在 `phase1/boot-27-battery-id.img`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
 
-阶段 1 留下、还没做的：没有 Gatekeeper。manifest 里的 `radio@1.1` 没有进程注册。
+阶段 1 留下、还没做的：没有 Gatekeeper。`radio@1.1` 的两个 rild 已经注册，第 9 项还没过。
 
 ## 本阶段禁止
 
@@ -148,6 +148,16 @@ HIDL 服务在拿到地址之前会直接退出（`Open: No Bluetooth Address!`�
 
 重启后六个模块都在，`vendor.sensors-hal-1-0` 是 running。`dumpsys sensorservice` 列出 LSM6DS3 加速度计和陀螺仪、YAS537 磁力计、HSPPAD 气压、SenseTek 光感和距离。加速度计已经在往 SensorService 送事件，静止时大约是 -0.01、0.36、9.56。打开之后陀螺仪、磁力计、气压都有输入事件。光感 `ABS_MISC` 是 15，和 `/sys/als` 读到的 14 lux 一致。距离打开时内核打了 `ps input event=1, ps code = 1225`，人离得远，绝对值不重复报，时间戳还在走。Wi-Fi 刷完之后仍是 `10.0.0.108`。
 
+2026-10-30 第 9 项，数据通了。通话和短信还没做，这一项没有过。Fizz 卡在第二槽，`gsm.sim.state=ABSENT,LOADED`。开机后驻在家网 LTE，运营商 Fizz，号码 `302490`（这张卡的等效家网，和 `302500` 一起），漫游是 false。首选网络是 9。`rmnet_data0` 拿到 `10.116.84.133/30`，网关 `10.116.84.134`，APN 仍是 `mobile.bm`。`ping 8.8.8.8` 三包都通，44 到 136 ms。这条网络在 Connectivity 里是 VALIDATED、NOT_ROAMING。
+
+上不了网不是 APN，也不是数据漫游开关。基带的数据会话能起来（`DSI_EVT_WDS_CONNECTED`），`netmgrd` 给 `rmnet_data0` 配地址时把同一块内存释放了两次。Android 11 的 Scudo 把进程打死，init 拉起来之后内核里 IPA 的 WAN 入口已经占着（`EP already allocated`，`failed to configure ingress`），这次呼叫被拆掉，框架看到的原因是 65535。`libnetmgr_malloc` 只预加载给 `netmgrd`，第二次释放直接丢掉。重启后这个进程的 pid 没变，dmesg 里没有 signal 6。没有重刷 system，库和 `zz-sambar-radio.rc` 里的 `LD_PRELOAD` 是写进当前这份 system 的。下一次编 system 会带上。`system.prop` 补了 `persist.data.netmgrd.qos.enable`、`persist.data.mode=concurrent`、`persist.rmnet.data.enable`。没有动 modem、modemst、fsg。
+
+3G 另测了一次。第二张卡的首选网络改成仅 WCDMA（模式 2），大约一分半。语音报的是 `No service Home in UMTS`，WCDMA、GSM、LTE 的信号字段都是无效值，没有测到小区。测完改回模式 9，上面的家网 LTE 和地址是这次重启之后的。基带镜像的 `mcfg_sw` 里没有加拿大运营商，有印度的 Airtel、Reliance 和一份通用 `gen_3gpp`。没有写 NV，没有改 USB。通话没有拨。4G 上语音域是家网 LTE（`REG_HOME`，RAT 14）。用户确认这台机器的 3G 只有 900/2100，当地 3G 是 850/1900，两边对不上。3G 和通话回落不再查。
+
+2026-10-30 换卡之后 4G 又没有网络。当时插着的是 Fizz，第二槽，`simSlotIndex=1`。飞行模式是关的，运营商和制式都是空的。RIL 日志停在 `telephony LPM`：射频被要求关掉。选过 3G 之后 `preferred_network_mode1` 停在 0，LTE 不在允许的制式里，所以换 TELUS 时状态栏没有 LTE 图标。模式 9 要发给这张卡自己的 subId。Fizz 是 1，那张 TELUS 是 2。发给 1 会打到空着的第一槽，那一槽的 modemRaf 是 32768，请求被收成仅 GSM。TELUS 用 subId 2 发过一次模式 9，当时已经驻上家网 LTE `302220`，信号大约 rsrp -91，但 `SETUP_DATA_CALL`（APN `sp.telus.com`）没有返回，`rmnet_data0` 上还留着上一张 Fizz 的地址。接着把 `ril-daemon2` 和 `netmgrd` 停掉再拉起来，新的 rild 里 `dsi_inited` 是 0，`dsi_get_data_srvc_hndl` 不给句柄，数据请求立刻以原因 65535 失败，射频也进了 LPM。
+
+这次没有再停这两个进程，也没有重刷。`setRadioForSubscriber` 对 subId 1，加上 `setRadioPower`，射频打开。几秒内 Fizz 回到家网 LTE，号码 `302490`，`rat=Unknown,LTE`。`rmnet_data0` 是 `10.118.52.138/30`，网关 `10.118.52.137`，DNS `10.208.36.186` 和 `10.208.37.47`，APN 仍是 `mobile.bm`。`ping 8.8.8.8` 三包都通，51 到 149 ms。Connectivity 是 VALIDATED、NOT_ROAMING。首选网络是 9。`netmgrd` 仍预加载 `libnetmgr_malloc`，这次配地址没有再被 Scudo 打死。TELUS 已经拔掉，这次没有再插回去测数据。通话和短信还没做。
+
 ## 事件
 
 - 2026-10-29：第 1 项。`ro.hardware.egl=adreno`，用的是这台机器自己的 Adreno 用户态和 `a420_pm4.fw`、`a420_pfp.fw`。system SHA256 `977197292482f6e18bd0647307bb3e42e30848d60fb3a20880433d9aef5c20b0`。只刷了 system，重启一次。Adreno 430，OpenGL ES 3.1，横条没有了，背光能灭能亮。细节在「实现笔记」。
@@ -161,3 +171,5 @@ HIDL 服务在拿到地址之前会直接退出（`Open: No Bluetooth Address!`�
 - 2026-10-29：整首 MP3 走压缩直通时放几秒就空几秒，放到第 11 项修 ADSP，不改成永久软解。FLAC 在提取器读元数据时失败，文件头是正常的 `fLaC`，不和 Venus 绑在一起。音量减没有输入事件，设备树里没有这个键，下一次改 boot 时补。三件都先不改。细节在「先记下、后面再修」。
 - 2026-10-30：第 7 项。Rome 固件仍在 `mmcblk0p12`，没有刷这个分区。`libbt-vendor` 从 `/bt_firmware/image` 下载，`wcnss_filter` 用这台机器自己的。地址来自 `persist/.bt_nv.bin`。开关、扫描、配对之后耳机里有声音，编码是 AAC。同一首 MP3 在耳机里不卡，因为这条路吃 PCM，不走喇叭的压缩直通。FLAC 仍停在提取器。system SHA256 `545ddb143e696d8627f99edcd127a975030b13fbdea3764fd579daab08311720`。只刷了 system，boot 仍是 `#27`。细节在「实现笔记」。
 - 2026-10-30：第 8 项。内核 `#27` 没有这些驱动，六个模块在开机时加载，没有重刷 boot。HAL 是这台机器的 `sensors.msm8994.so`，装成 `sensors.qcom.so`。加速度计、陀螺仪、磁力计、气压、光感、距离都有事件，霍尔报了一次开盖。`/persist/accel_cali.conf` 和 `gyro_cali.conf` 没有改，驱动通过符号链接读它们。system SHA256 `baa659f4a5cf2ba871b62cfa154fe601c90db1301fb73bf1bae6c2f762b077d0`。只刷了 system。细节在「实现笔记」。
+- 2026-10-30：第 9 项还没过。数据通了：家网 Fizz LTE（`302490`），`rmnet_data0` 是 `10.116.84.133`，APN `mobile.bm`，`ping 8.8.8.8` 通。`netmgrd` 配地址时重复释放，Scudo 把进程打死，给它单独换了分配器。没有重刷 system，也没有动 modem。仅 WCDMA 搜了大约一分半，没有测到小区。通话和短信还没做。细节在「实现笔记」。
+- 2026-10-30：换卡之后 4G 没有网络。射频停在 telephony LPM，飞行模式开关是关的。`setRadioForSubscriber` 和 `setRadioPower` 打开射频，首选网络回到模式 9。Fizz 再次驻上家网 LTE `302490`，`rmnet_data0` 是 `10.118.52.138`，APN `mobile.bm`，`ping 8.8.8.8` 通。用户确认 3G 频段对不上，不再查。没有重刷，没有动 modem。细节在「实现笔记」。

@@ -1,0 +1,69 @@
+# Parsed after rild.legacy.rc. The first rild is client 0, which registers
+# IRadio/slot1. -c 2 registers slot2. The Fizz SIM is in the second slot.
+# rild runs as root so it can hold /dev/subsys_modem open.
+
+on boot
+    mkdir /dev/socket/qmux_radio 0770 radio radio
+    chmod 2770 /dev/socket/qmux_radio
+    mkdir /dev/socket/qmux_audio 0770 media audio
+    chmod 2770 /dev/socket/qmux_audio
+    mkdir /dev/socket/qmux_bluetooth 0770 bluetooth bluetooth
+    chmod 2770 /dev/socket/qmux_bluetooth
+    mkdir /dev/socket/qmux_gps 0770 gps gps
+    chmod 2770 /dev/socket/qmux_gps
+    mkdir /dev/socket/netmgr 0750 radio radio
+    chmod 0660 /dev/subsys_modem
+    chown system radio /dev/subsys_modem
+
+on post-fs-data
+    mkdir /data/misc/radio 0770 radio radio
+    mkdir /data/misc/sms 0770 radio radio
+    mkdir /data/misc/net 0770 radio radio
+    mkdir /data/tombstones/modem 0771 system system
+    mkdir /data/tombstones/lpass 0771 system system
+
+service rmt_storage /vendor/bin/rmt_storage
+    class core
+    user root
+
+service rfs_access /vendor/bin/rfs_access
+    class core
+    user root
+    group system net_raw
+
+service irsc_util /vendor/bin/irsc_util /system/etc/sec_config
+    class main
+    user root
+    oneshot
+
+service qmuxd /vendor/bin/qmuxd
+    class main
+    user root
+    group radio audio bluetooth gps
+
+service netmgrd /vendor/bin/netmgrd
+    class main
+    user root
+    group radio inet
+    # Android 6 netmgrd double-frees while bringing rmnet up. Scudo aborts
+    # the process and the data call is dropped. This allocator ignores that
+    # second free. It is not used by any other process.
+    setenv LD_PRELOAD /vendor/lib64/libnetmgr_malloc.so
+
+service time_daemon /vendor/bin/time_daemon
+    class late_start
+    user root
+    group root
+
+service ril-daemon /vendor/bin/hw/rild
+    override
+    class main
+    user root
+    group radio cache inet misc audio log readproc wakelock
+    capabilities BLOCK_SUSPEND NET_ADMIN NET_RAW
+
+service ril-daemon2 /vendor/bin/hw/rild -c 2
+    class main
+    user root
+    group radio cache inet misc audio log readproc wakelock
+    capabilities BLOCK_SUSPEND NET_ADMIN NET_RAW

@@ -276,3 +276,51 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.sensor.barometer.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.barometer.xml \
     frameworks/native/data/etc/android.hardware.sensor.light.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.light.xml \
     frameworks/native/data/etc/android.hardware.sensor.proximity.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.proximity.xml
+
+# Radio. Blobs are this phone's Android 6 QMI stack. Modem firmware stays
+# on the modem partition; opening /dev/subsys_modem loads it. pm-service is
+# not installed. libperipheral_client is built here and holds that fd.
+# The Fizz SIM is in the second slot, so ril-daemon2 is started as well.
+PRODUCT_PACKAGES += \
+    libperipheral_client \
+    libnetmgr_malloc \
+    librmnetctl
+
+PRODUCT_COPY_FILES += \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/radio/vendor.sambar.radio.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/zz-sambar-radio.rc \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/configs/sec_config:$(TARGET_COPY_OUT_SYSTEM)/etc/sec_config \
+    $(SAMBAR_BLOB)/etc/data/dsi_config.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/data/dsi_config.xml \
+    $(SAMBAR_BLOB)/etc/data/netmgr_config.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/data/netmgr_config.xml \
+    $(SAMBAR_BLOB)/etc/data/qmi_config.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/data/qmi_config.xml \
+    $(SAMBAR_BLOB)/bin/qmuxd:$(TARGET_COPY_OUT_VENDOR)/bin/qmuxd \
+    $(SAMBAR_BLOB)/bin/netmgrd:$(TARGET_COPY_OUT_VENDOR)/bin/netmgrd \
+    $(SAMBAR_BLOB)/bin/rmt_storage:$(TARGET_COPY_OUT_VENDOR)/bin/rmt_storage \
+    $(SAMBAR_BLOB)/bin/rfs_access:$(TARGET_COPY_OUT_VENDOR)/bin/rfs_access \
+    $(SAMBAR_BLOB)/bin/irsc_util:$(TARGET_COPY_OUT_VENDOR)/bin/irsc_util \
+    $(SAMBAR_BLOB)/bin/time_daemon:$(TARGET_COPY_OUT_VENDOR)/bin/time_daemon \
+    $(SAMBAR_BLOB)/vendor/lib64/libril-qc-qmi-1.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libril-qc-qmi-1.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libril-qc-radioconfig.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libril-qc-radioconfig.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libril-qcril-hook-oem.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libril-qcril-hook-oem.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqmi.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqmi.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqmi_cci.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqmi_cci.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqmi_client_helper.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqmi_client_helper.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqmi_client_qmux.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqmi_client_qmux.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqmi_common_so.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqmi_common_so.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqmi_csi.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqmi_csi.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqmi_encdec.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqmi_encdec.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqmiservices.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqmiservices.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libdsi_netctrl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libdsi_netctrl.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libdsutils.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libdsutils.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libconfigdb.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libconfigdb.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libnetmgr.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libnetmgr.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libcneapiclient.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libcneapiclient.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libmdmdetect.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libmdmdetect.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libidl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libidl.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqdp.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqdp.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libtime_genoff.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libtime_genoff.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libsystem_health_mon.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libsystem_health_mon.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libxml.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libxml.so \
+    $(SAMBAR_BLOB)/vendor/lib64/liblqe.so:$(TARGET_COPY_OUT_VENDOR)/lib64/liblqe.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqdi.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqdi.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libsmemlog.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libsmemlog.so \
+    frameworks/native/data/etc/android.hardware.telephony.gsm.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.telephony.gsm.xml

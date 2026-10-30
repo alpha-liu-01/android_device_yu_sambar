@@ -107,6 +107,9 @@ ril.ecclist=000,08,100,101,102,110,112,118,119,120,122,911,999
 ro.com.android.mobiledata=false
 ro.telephony.default_network=9,9
 ro.use_data_netmgrd=true
+persist.data.netmgrd.qos.enable=true
+persist.data.mode=concurrent
+persist.rmnet.data.enable=true
 
 # Time
 persist.timed.enable=true
