@@ -16,7 +16,7 @@
 #
 
 # Phase 1 skeleton: panel, touch keymaps, fstab, lights.
-# Fingerprint, doze, IMS, camera and RIL stay out until a later phase.
+# Fingerprint, doze and camera stay out. IMS is the VoLTE client for item 9.
 
 LOCAL_PATH := device/yu/sambar
 
@@ -24,6 +24,9 @@ PRODUCT_SOONG_NAMESPACES += \
     device/yu/sambar
 
 PRODUCT_CHARACTERISTICS := nosdcard
+
+# Only this directory. The cm-13.0 overlay/ tree stays out of the product.
+PRODUCT_PACKAGE_OVERLAYS += device/yu/sambar/overlay-ims
 
 # 1440x2560, 560 dpi
 TARGET_SCREEN_HEIGHT := 2560
@@ -284,10 +287,28 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     libperipheral_client \
     libnetmgr_malloc \
-    librmnetctl
+    librmnetctl \
+    SambarIms \
+    libimsmedia_jni \
+    libimscamera_jni
+
+IMS_PATCH := /home/alpha/Documents/GitHub/android_device_yu_sambar/third_party/patch_final_part-2/system
 
 PRODUCT_COPY_FILES += \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/radio/vendor.sambar.radio.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/zz-sambar-radio.rc \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/radio/ims-socket-perm.sh:$(TARGET_COPY_OUT_VENDOR)/bin/ims-socket-perm.sh \
+    /home/alpha/Documents/GitHub/android_device_yu_sambar/ims/privapp-permissions-org.codeaurora.ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-org.codeaurora.ims.xml \
+    frameworks/native/data/etc/android.hardware.telephony.ims.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.telephony.ims.xml \
+    $(IMS_PATCH)/bin/imsqmidaemon:$(TARGET_COPY_OUT_VENDOR)/bin/imsqmidaemon \
+    $(IMS_PATCH)/bin/imsdatadaemon:$(TARGET_COPY_OUT_VENDOR)/bin/imsdatadaemon \
+    $(IMS_PATCH)/bin/ims_rtp_daemon:$(TARGET_COPY_OUT_VENDOR)/bin/ims_rtp_daemon \
+    $(IMS_PATCH)/vendor/lib64/lib-imsdpl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/lib-imsdpl.so \
+    $(IMS_PATCH)/vendor/lib64/lib-dplmedia.so:$(TARGET_COPY_OUT_VENDOR)/lib64/lib-dplmedia.so \
+    $(IMS_PATCH)/vendor/lib64/lib-rtpcommon.so:$(TARGET_COPY_OUT_VENDOR)/lib64/lib-rtpcommon.so \
+    $(IMS_PATCH)/vendor/lib64/lib-rtpcore.so:$(TARGET_COPY_OUT_VENDOR)/lib64/lib-rtpcore.so \
+    $(IMS_PATCH)/vendor/lib64/lib-rtpdaemoninterface.so:$(TARGET_COPY_OUT_VENDOR)/lib64/lib-rtpdaemoninterface.so \
+    $(IMS_PATCH)/vendor/lib64/lib-rtpsl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/lib-rtpsl.so \
+    $(SAMBAR_BLOB)/vendor/lib64/libqcci_legacy.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libqcci_legacy.so \
     /home/alpha/Documents/GitHub/android_device_yu_sambar/configs/sec_config:$(TARGET_COPY_OUT_SYSTEM)/etc/sec_config \
     $(SAMBAR_BLOB)/etc/data/dsi_config.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/data/dsi_config.xml \
     $(SAMBAR_BLOB)/etc/data/netmgr_config.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/data/netmgr_config.xml \

@@ -159,9 +159,9 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 
 格力阶段 3 把「能进桌面」从收口标准里拿掉，改成一套可以天天用的系统，然后才谈下一版 Android。这边同样。阶段 0 探到的硬件都进下表。表里没有的 NFC、红外、FM 不排：`ueventd.qcom.rc` 里的 `nfc-nci` 是高通模板，阶段 0 没有对应的输入设备或芯片。定位用捐赠树的 HIDL gnss，只留 sambar 的 `gps.conf`。阶段 0 没有定位成功的记录，蜂窝通了再看，不单独挡住。
 
-完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi、第 7 项蓝牙、第 8 项传感器和第 10 项振动已经通过。电量计已配上 `apak-3000mah-10k`，记录在 `docs/sambar-phase-2.md`，不单列一项。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
+完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控、第 4 项 USB、第 5 项 Wi-Fi、第 7 项蓝牙、第 8 项传感器和第 10 项振动已经通过。电量计已配上 `apak-3000mah-10k`，记录在 `docs/sambar-phase-2.md`，不单列一项。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。VoLTE 是第 9 项的通话路径，不再放到收口之后。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
 
-启动链分区、modem、bluetooth、modemst1、modemst2、fsg、persist、persistbak、config 继续不写。不跑 `oem unlock`。不用一加 2 的 system、vendor 或固件镜像。一加 2 只提供 SoC 级的 HAL 结构。
+启动链分区、modem、bluetooth、fsg、persist、persistbak、config 继续不写。`modemst1` 和 `modemst2` 只在第 9 项的 VoLTE 里写：整份 `Gen_3GPP-ROW` 已经激活过，数据掉了并已写回。接下来只把 IMS 相关的 NV 写进当前还能上网的 EFS，不动数据配置；LTE 数据掉了就用 `lte-good` 那两份写回。不跑 `oem unlock`。不用一加 2 的 system、vendor 或固件镜像。一加 2 只提供 SoC 级的 HAL 结构。
 
 #### 开始前先清 userdata
 
@@ -182,7 +182,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 | Wi-Fi 模块 `wlan.ko` | 第 5 项。已通过，继续编成模块 |
 | 蓝牙 QCA Rome，固件分区 `mmcblk0p12`（1 MiB，df 显示的 1.0G 是错的） | 第 7 项。已通过。固件仍在这个分区上，没有另刷 |
 | ST LSM6DS3 加速度计和陀螺仪，`yas537_mag`，`alps_pressure`，光感，距离，霍尔 | 第 8 项。已通过。校准仍在 persist，没有改 |
-| modem 分区 80 MiB，modemst1 / modemst2 / fsg 各 4 MiB | 第 9 项。继续用这台机器自己的分区 |
+| modem 分区 80 MiB，modemst1 / modemst2 / fsg 各 4 MiB | 第 9 项。modem 分区和 fsg 仍用这台机器自己的。整份 ROW 已写回。modemst 接下来只补 IMS 的 NV，数据掉了用 `lte-good` 备份写回 |
 | 相机 `imx230` 与 `ov8865`，`BOARD_QTI_CAMERA_32BIT_ONLY`，`persist.camera.HAL3.enabled=0` | 第 12 项。维持 HAL1 |
 | Silead，`silead-vinput-keypad`，`fingerprintd` 与 `fpsvcd` | 第 13 项。不换成一加 2 的指纹 |
 | USB 在 Android 里是 `2a96:3014`，bootloader 是 `2a96:301c` | 第 4 项。已通过。现在的 gadget 用 `18d1` |
@@ -200,12 +200,42 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 6. 音频。喇叭、听筒、有线耳机三个出口都有声音，麦克风能录。TFA9887 走现有 `libtfa9887` 和 acdb。通话拓扑如果必须先关掉回声消除才能响，先记下，回声消除不挡收口。整首 MP3 卡顿、FLAC 打不开、音量减键没有上报，记在 `docs/sambar-phase-2.md`，不在这一项里改。
 7. 蓝牙。已通过。开关、扫描、配对、A2DP 播放都做过。固件读 `mmcblk0p12`，没有另刷。同一首 MP3 在耳机里不卡，是因为 A2DP 吃 PCM 再编成 AAC，不走喇叭的压缩直通。FLAC 仍然打不开。耳机上的通话留到收口之后。记录在 `docs/sambar-phase-2.md`。
 8. 传感器。已通过。加速度计、陀螺仪、磁力计、气压、光感、距离、霍尔都有事件。persist 里的校准没有改。记录在 `docs/sambar-phase-2.md`。
-9. 蜂窝。第一张卡识别、驻网、数据能上网，听筒和免提各打通一次。RIL 用这台机器的 modem 分区和现有 blob，不换一加 2 的。短信要能收发。第二张卡和 VoLTE 不挡。阶段 0 没有读卡槽数量。
+9. 蜂窝。第一张卡识别、驻网、数据能上网。通话走 VoLTE：这台机器的 3G 只有 900/2100，当地 3G 是 850/1900，回落没有小区。听筒和免提各打通一次仍要，等 IMS 注册之后再拨。RIL 用这台机器的 modem 分区和现有 QCRIL，不换一加 2 的基带镜像，也不刷 `third_party/` 里那两份 Kenzo 补丁。整份 `Gen_3GPP-ROW` 不再激活。modemst 按下面「VoLTE」只补 IMS 的 NV。短信要能收发。第二张卡不挡。阶段 0 没有读卡槽数量。做法在下面「VoLTE」。
 10. 振动。已通过。用户确认马达是好的。
 11. 硬件编解码。视频能播能录一段，音频解码不走软解兜底。Venus 和 ADSP 用现有固件路径。编解码进程崩溃先修这个，再进相机。MP3 走喇叭的压缩直通时放几秒就空几秒，在这一项里修通，不要改成永久软解。蓝牙耳机里同一首不卡，那是另一条 PCM 再编码的路，不算这一项过了。FLAC 打不开停在提取器，不和 Venus 绑在一起。细节在 `docs/sambar-phase-2.md`。
 12. 相机。后摄 `imx230`、前摄 `ov8865` 都能预览、拍照、录短视频。32 位 HAL1，不在这一阶段打开 HAL3。
 13. 指纹。先有 Gatekeeper，再录入一枚，锁屏能解开，另一根手指被拒绝。用户态继续是 Silead 的 `fpsvcd`，校准留在 persist。没有 Gatekeeper 时不要设密码。
 14. 休眠唤醒再确认一次。第 1 项的电源键之后，Wi-Fi、蜂窝和传感器都开着时再睡一次、再亮一次。背光必须灭。阶段 1 里 `cont_splash` 期间 `lcd-backlight` 不写硬件，电流在 WLED 上。
+
+#### VoLTE
+
+2026-10-30 用户态已经刷进 system，没有拨号。3G 频段对不上，第 9 项的听筒和免提只能走 VoLTE。IMS 套接字已经连上。`IMS_enable` 和 `voice_domain_pref` 已经写进当前还能上网的 EFS。`/Data_Profiles/Profile3` 是 APN `ims`，重启后还在，`mobile.bm` 也能上网。没有 `ims` 数据呼叫，`ims rte` 仍是 0。`qp_ims_reg_config` 没有留在 EFS 里。这一步停，听筒和免提先不拨。细节在 `docs/sambar-phase-2.md`。
+
+用户态已经接上。这台机器的 `libril-qc-qmi-1.so` 里有 `qcril_qmi_ims_socket_agent`，是 Android 6 的 IMS 套接字，不是后来的 `IImsRadio`。`mixer_paths.xml` 里已经有 `volte-call`。`BoardConfig.mk` 里的 `AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS` 是为了让通话走 `0x11C05000` 这一路，VoLTE 用同一条。阶段 0 备份的 modem 镜像日期是 2015-11-27。`mcfg_sw` 里有移动的 `volte_op`、`volte_su`，EE 的 `volte`，AT&T 的 `volte`，T-Mobile，以及 `common/row/gen_3gpp`（尾部名字 `Gen_3GPP-ROW`）。没有 Fizz、TELUS、Bell、Rogers、Videotron。`default` 那份没有 `IMS_enable`。原厂包、2017 年的 Lineage 13、ResurrectionRemix 里都没有 ims 二进制。专有清单里只有 `libNimsWrap`。
+
+两条公开线索对得上，而且都不在内核里。Evolution X 4.7 用的 `mukul2259/kernel_oneplus_msm8994` 只是那颗 3.10。VoLTE 在 `mukul2259/device_oneplus_oneplus2`，仓库说明写的就是 VoLTE。`aex` 和 `lineage-18.1` 都编 `ims-ext-common_system`、`libshims_ims`，并带上 `android.hardware.telephony.ims.xml`。`aex` 打开 `persist.dbg.volte_avail_ovr=1`，视频通话覆盖是 0。同一作者的 `ims_apk`（分支 `ims-ten`）是改过的 Nougat `org.codeaurora.ims`，接到 Android 9/10 的 MMTel，给旧基带用。一加 2 的 18.1 把 `imsdatadaemon`、`imsqmidaemon` 标成 MIUI Hydrogen 7.7.6，`ims.apk` 标成 marlin 的 Android 10，服务放在 `/system/vendor/bin/`。运营商覆盖是印度 Jio（405）和中国（460）那一类，没有 302。
+
+`third_party/patch_initial_Part-1` 和 `patch_final_part-2` 是红米 Note 3（Kenzo）的 Android 6「VoLTE Universal」，作者 Sudeep Duhoon，帖子里有人刷到一加 2 的 Lineage 13 上打通过。两份脚本相同：打开 `service.qti.ims.enabled`、`persist.dbg.volte_avail_ovr`、`persist.dbg.vt_avail_ovr`，把 `persist.radio.hw_mbn_update`、`persist.radio.sw_mbn_update`、`persist.radio.VT_HYBRID_ENABLE` 注释掉，fluence 改成 false，`ro.telephony.default_network=9,9`，`telephony.lteOnCdmaDevice=1,1`。文件名单相同。第二份换掉 `ims.apk`、`imsdatadaemon` 和几份库，所以先刷第一份会让 `android.phone` 崩，再刷第二份才好。守护进程按 Android 23 链接，依赖 `libqmiservices`、`libqmi_cci`、`libdiag`、`libc++`。`imsdatadaemon` 还要 `libwpa_client` 和 `libcneapiclient`。这不是这台机器的 blob。不刷这两个包，也不把红米或一加 2 的库整份拷进镜像。
+
+用户态已经按上面做完：`ims.apk` 用 `ims_apk` 的 `ims-ten` 对着 18.1 编，三个守护进程用补丁第二份，属性是 `persist.dbg.volte_avail_ovr=1` 和 `service.qti.ims.enabled=1`。套接字连上了，注册仍是 0。
+
+2026-10-30 放开 modemst。成功率最高的一步是激活这台镜像里已有的 `Gen_3GPP-ROW`，不刷 modem 分区，不载别的机器的 MBN。这份文件和同目录其它 mbn 同一天生成。`IMS_enable` 内容字节是 `0x01`，与 AT&T 的 `volte`、移动的 `volte_op` 相同；移动的 `nov_open` 是 `0x00`。`voice_domain_pref` 是 `0x03`。会议地址是 `conference$domain_name$`，域名跟着卡走。AT&T、EE、T-Mobile、Verizon 那几份把 IMS 主机写死成自己的。`Gen_3GPP-ROW` 的数据配置名字里有 `nxtgenphone`，所以激活之后先看 `mobile.bm` 还在不在。
+
+2026-10-30 按这个顺序做了。激活前 PDC 没有选中的 config id，不是 `Gen_3GPP-ROW`。`persist.radio.sw_mbn_update` 这条路在这颗 `libril` 里没有调用点。主 rild 的 OEM hook 把镜像里的 `common/row/gen_3gpp` 载入并选中 SUB:2，激活后手机重启。Fizz 仍报家网 LTE，APN 仍是 `mobile.bm`，数据呼叫原因 65535，`rmnet_data0` 没有地址，注册仍是 0。已用激活前的 modemst 写回。再重启后 Fizz 是 `302490`，`rmnet_data0` 是 `10.118.3.158/30`，注册仍是 0。没有拨号。modem 分区和 fsg 没写。同一份 ROW 不再整份激活。
+
+还有希望。失败的是上网配置被整份换掉，不是网络拒绝了 IMS。写回之后注册仍是 0，是因为 EFS 回到了没有 `IMS_enable` 的那份。用户态已经连上，不再换 apk。`Gen_3GPP-ROW` 里上网配置的名字是 `Internet APN` / `nxtgenphone`，和 `mobile.bm` 不是一条。`IMS_enable` 和 `voice_domain_pref` 是同一份文件里另外的项：`/nv/item_files/ims/IMS_enable` 内容字节 `0x01`，`/nv/item_files/modem/mmode/voice_domain_pref` 内容字节 `0x03`。
+
+2026-10-30 只写了这两项，没有动数据配置。写之前 `IMS_enable` 不存在，`voice_domain_pref` 是 `0x00`。写完分别是 `0x01` 和 `0x03`。两份 modemst 的超级块序号仍相邻。重启后 Fizz 还在家网 LTE，`rmnet_data0` 有地址，`ping 8.8.8.8` 通。`ims rte` 仍是 0。上网的那路数据呼叫里 `pcscf` 是空的。不加载移动、AT&T、T-Mobile，也不刷别的机器的 modem 分区。这台 2015-11-27 的镜像里没有写着 302/490 或 302/500 的 mcfg，不再找。Pixel 和 A2005 没有 Fizz 的配置，不走那两条。
+
+还有希望。`ims rte` 停在 0 只说明基带没有选出 IMS，不是网络拒绝了注册。这两项打开之后，基带仍然没有名为 `ims` 的承载，SIP 没有可去的地方。同一份 `Gen_3GPP-ROW` 里，`/Data_Profiles/Profile1` 的 APN 是 `internet`，`/Data_Profiles/Profile2` 的 APN 是 `ims`。整份激活时前一份把原来的上网配置换掉了，后一份从来没单独写过。`qp_ims_ut_config` 里的 `Internet APN` / `nxtgenphone` 也不写。`qp_ims_reg_config` 里写死了 `155.165.125.199:5060`，那是这份 ROW 自己的 P-CSCF，不是 302490 或 302500 的，不写这个地址。
+
+2026-10-30 先读了 `/Data_Profiles/`。Profile1 是空的。Profile2 的 APN 是 `mobile.bm`，没有动。没有 APN 为 `ims` 的配置。ROW 的 Profile2 改成配置号 3，写到 `/Data_Profiles/Profile3`，APN 是 `ims`，不含 `internet` 和 `nxtgenphone`。第一次写完马上重启，文件没有留下，随后几次开机数据呼叫都是 `unable to get dsi hndl`、原因 65535。在 recovery 里把 `modemst1-ims-booted-20261030.img` 和 `modemst2-ims-booted-20261030.img` 写回，哈希对上，开机后 Fizz 是 `302490`，`ping 8.8.8.8` 通。同步之后再写 Profile3，重启后文件还在，150 字节，`mobile.bm` 仍能上网。没有 `ims` 的数据呼叫，`ims rte` 仍是 0。
+
+`qp_ims_reg_config` 不存在。按 ROW 里这份文件去掉 `155.165.125.199:5060` 之后写过一次，读回有 APN `ims`、没有那个地址。重启后 stat 错误是 2，基带没有留下。没有再写。没有拨号。当前超级块是 `IMGEFS1d` 和 `IMGEFS2e`，序号 1124 和 1125，相差 1。modem 分区和 fsg 没写。
+
+这一步停。Profile3 在，数据在，基带仍不建立 `ims` 承载，注册配置也留不住。不把 `155.165.125.199` 写进去，也不再猜这份注册文件的字节。听筒和免提仍等 `ims rte` 离开 0。
+
+同日开机第一屏在大约每 17 秒重启一次。基带挂 EFS 失败，日志是 `fs_rmts_super.c` 的 `Superblk age not in sequence`，`restart_level` 是 `SYSTEM`，所以整颗 SoC 跟着重启。当时两份序号是 1122 和 1119，差 3。那对是手机还开着时拷下来的，不能当重启后的恢复点。只改旧副本的序号没有让它起来。写回序号相邻的 `lte-good`（1120 和 1119）之后能开机，数据也回来了。细节在 `docs/sambar-phase-2.md`。
 
 #### 不挡住这次收口
 
@@ -213,7 +243,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 
 1. 通话能听清。听筒和免提先响了再收，回声消除和降噪可以后补。
 2. 蓝牙耳机上的通话。
-3. 第二张卡和 VoLTE。第一张卡的短信、数据和普通通话已经在第 9 项里。
+3. 第二张卡。第一张卡的短信、数据和 VoLTE 通话已经在第 9 项里。
 4. 定位。gnss HIDL，配置只用 sambar 的 `gps.conf`。不把 CM13 的 `loc_api` 整棵树搬进 18.1。
 5. 可刷的安装包。只含 boot 和 system。recovery 不放进同一包，除非下面一项已经能刷它。
 6. 能挂这块 f2fs、也能刷 system-as-root 包的 recovery。现在的 TWRP 2.8.7 能挂 `/data`，不保证能刷 18.1 的包。换 recovery 之前，现在这份镜像留在 `device-backup/` 的恢复路径上。

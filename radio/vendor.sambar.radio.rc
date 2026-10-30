@@ -67,3 +67,40 @@ service ril-daemon2 /vendor/bin/hw/rild -c 2
     user root
     group radio cache inet misc audio log readproc wakelock
     capabilities BLOCK_SUSPEND NET_ADMIN NET_RAW
+
+# rild is root, so these sockets come up 0700. The IMS client is the phone
+# process and needs the group bit.
+service vendor.ims-socket-perm /vendor/bin/ims-socket-perm.sh
+    class main
+    user root
+    oneshot
+
+# Kenzo Android 6 IMS daemons. imsqmidaemon sets sys.ims.QMI_DAEMON_STATUS,
+# imsdatadaemon sets sys.ims.DATA_DAEMON_STATUS. Not the vendor.ims.* names.
+service vendor.imsqmidaemon /vendor/bin/imsqmidaemon
+    class main
+    user system
+    socket ims_qmid stream 0660 system radio
+    group radio log
+
+# Binds an IPC-router server, then drops to system. The kernel only allows
+# that bind with CAP_NET_RAW or CAP_NET_BIND_SERVICE.
+service vendor.imsdatadaemon /vendor/bin/imsdatadaemon
+    class main
+    user root
+    socket ims_datad stream 0660 system radio
+    group system wifi radio inet log
+    disabled
+
+service vendor.ims_rtp_daemon /vendor/bin/ims_rtp_daemon
+    class main
+    user system
+    group radio inet log
+    capabilities NET_BIND_SERVICE
+    disabled
+
+on property:sys.ims.QMI_DAEMON_STATUS=1
+    start vendor.imsdatadaemon
+
+on property:sys.ims.DATA_DAEMON_STATUS=1
+    start vendor.ims_rtp_daemon
