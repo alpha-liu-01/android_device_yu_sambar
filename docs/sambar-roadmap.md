@@ -159,7 +159,7 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 
 格力阶段 3 把「能进桌面」从收口标准里拿掉，改成一套可以天天用的系统，然后才谈下一版 Android。这边同样。阶段 0 探到的硬件都进下表。表里没有的 NFC、红外、FM 不排：`ueventd.qcom.rc` 里的 `nfc-nci` 是高通模板，阶段 0 没有对应的输入设备或芯片。定位用捐赠树的 HIDL gnss，只留 sambar 的 `gps.conf`。阶段 0 没有定位成功的记录，蜂窝通了再看，不单独挡住。
 
-完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 3 项触控和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
+完成标准：下面 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。步骤写进 `docs/sambar-phase-2.md`，本文只留顺序。
 
 启动链分区、modem、bluetooth、modemst1、modemst2、fsg、persist、persistbak、config 继续不写。不跑 `oem unlock`。不用一加 2 的 system、vendor 或固件镜像。一加 2 只提供 SoC 级的 HAL 结构。
 
@@ -188,12 +188,12 @@ boot、recovery 和基带校准已在 `/run/media/alpha/YMTC/sambar/device-backu
 | USB 在 Android 里是 `2a96:3014`，bootloader 是 `2a96:301c` | 第 4 项 |
 | eMMC，无 A/B，无 vendor 分区 | 不单列。system 仍是 3 GiB |
 
-阶段 0 的表没有单独写振动马达。阶段 1 为了让 `system_server` 过阶段 480，已经装了 `vibrator.default`。用户确认马达是好的，第 10 项已通过。也没有实体导航键：`gpio-keys.kl` 只有音量加，`qpnp_pon.kl` 只有电源和音量减。虚拟导航键和全面屏手势是第 2 项，硬件加速之后先做。编解码不是阶段 0 的探针。格力把它算进日用收口，这边放在第 11 项。
+阶段 0 的表没有单独写振动马达。阶段 1 为了让 `system_server` 过阶段 480，已经装了 `vibrator.default`。用户确认马达是好的，第 10 项已通过。也没有实体导航键：`gpio-keys.kl` 只有音量加，`qpnp_pon.kl` 只有电源和音量减。虚拟导航键和全面屏手势是第 2 项，已通过。编解码不是阶段 0 的探针。格力把它算进日用收口，这边放在第 11 项。
 
 #### 验收顺序
 
 1. 显示能看。已通过。Adreno 430，OpenGL ES 3.1，桌面没有横条，背光能灭能亮。记录在 `docs/sambar-phase-2.md`。
-2. 系统导航。三键导航栏和全面屏手势都要能用：返回、回桌面、最近任务。这台手机没有实体导航键，后面的测试靠这个。硬件加速通过之后先做这项。
+2. 系统导航。已通过。三键导航栏和全面屏手势都能返回、回桌面、打开最近任务。记录在 `docs/sambar-phase-2.md`。
 3. 触控。已通过。用户确认能用。固件仍是 `A4_15_2.2_AA.fw`。清盘或换 GPU 之后如果触摸没了，再回到这项。
 4. USB。文件传输两个方向都能拷文件。充电、MTP、PTP 能切换。现在 `init.sambar.rc` 把 `sys.usb.config` 钉成 `adb`，这只是阶段 1 的调试口。这颗内核是传统 `android_usb`，不是 ConfigFS。adb 继续用阻塞读写（`ro.adb.nonblocking_ffs=0`，`sys.usb.ffs.aio_compat=true`）。插了 U 盘时按 fstab 的 `usbdisk` 挂上；阶段 0 没有插过 U 盘，挂不上不挡这一项。
 5. Wi-Fi。`wlan.ko` 加载，固件来自这台机器，能扫描、连接、拿到地址，`ping` 通。supplicant 用 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。

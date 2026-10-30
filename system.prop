@@ -55,6 +55,10 @@ persist.sys.dpmd.nsrm=3
 ro.sys.fw.dex2oat_thread_count=4
 
 # Display
+# The CM13 overlay sets config_showNavigationBar, but that directory is not
+# a product overlay, so the framework default stays false and there is no
+# software bar. This phone has no nav keys. 0 forces the bar on.
+qemu.hw.mainkeys=0
 debug.composition.type=c2d
 debug.mdpcomp.idletime=600
 persist.hwc.mdpcomp.enable=true

@@ -2,9 +2,9 @@
 
 日期：2026-10-29。路线图是 `docs/sambar-roadmap.md`。阶段 1 已完成，记录在 `docs/sambar-phase-1.md`。本文记阶段 2 的顺序和约束。实现笔记和事件先空着，做的时候再补。
 
-完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 3 项触控和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
+完成标准：验收顺序 1 到 14 都有实机记录。第 1 项显示、第 2 项导航、第 3 项触控和第 10 项振动已经通过。SELinux 保持 permissive，每次开机的 denial 存下来。短信、第二张卡、VoLTE、通话回声消除、蓝牙耳机通话、加密、可刷的安装包、新 TWRP 都不挡住这 14 项。前一项没有记录，先不跳到下一项。
 
-当前 system SHA256 `165d579930970b4633c5c90feb1837740dd593deed41ea6f4035890048733b60`。boot 仍是内核 `#27`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
+当前 system SHA256 `64075779f342065245803419a616466eed36235701248775b18c8f466d2688b8`。boot 仍是内核 `#27`。recovery 是内核 `#16`，能挂上 userdata 的 f2fs。
 
 阶段 1 留下、还没做的：USB 被 init 钉成只有 adb。没有 Gatekeeper。manifest 里的 `radio@1.1` 没有进程注册。
 
@@ -39,7 +39,7 @@
 ## 验收顺序
 
 1. 显示能看。已通过。Adreno 430，OpenGL ES 3.1，桌面壁纸没有横条。亮度条和电源键都能改背光。细节在「实现笔记」。
-2. 系统导航。硬件加速通过之后先做这项，再测后面的设置和返回。这台手机没有实体导航键。`keylayout/gpio-keys.kl` 只有 `VOLUME_UP`，`keylayout/qpnp_pon.kl` 只有 `POWER` 和 `VOLUME_DOWN`。overlay 里 `config_showNavigationBar` 已是 true。三键导航栏和全面屏手势都要能用，各自要能返回、回桌面、打开最近任务。
+2. 系统导航。已通过。三键导航栏和全面屏手势都能返回、回桌面、打开最近任务。这台手机没有实体导航键。细节在「实现笔记」。
 3. 触控。已通过，见上面。
 4. USB。文件传输两个方向都能拷文件。充电、MTP、PTP 能切换。现在 `init.sambar.rc` 把 `sys.usb.config` 钉成 `adb`，这只是阶段 1 的调试口。这颗内核是传统 `android_usb`，不是 ConfigFS。adb 继续用阻塞读写（`ro.adb.nonblocking_ffs=0`，`sys.usb.ffs.aio_compat=true`）。插了 U 盘时按 fstab 的 `usbdisk` 挂上。阶段 0 没有插过 U 盘，挂不上不挡这一项。
 5. Wi-Fi。`wlan.ko` 加载，固件来自这台机器，能扫描、连接、拿到地址，`ping` 通。supplicant 用 HIDL。内核继续 `CONFIG_QCA_CLD_WLAN=m`。
@@ -86,9 +86,18 @@
 
 `Bitmap.java` 恢复成原来的硬件位图路径。`TaskSnapshotLoader` 在结果不是 `Config.HARDWARE` 时直接返回，不再把 `system_server` 打死。`init.sambar.rc` 在 `on boot` 里 `stop console`，锁屏不再挂那条串口通知。没有改内核命令行，boot 仍是 `#27`。稀疏文件 SHA256 `165d579930970b4633c5c90feb1837740dd593deed41ea6f4035890048733b60`，展开后正好 3221225472。只刷了 system，三段 Writing 都是 OKAY，总时间 71.6 秒。没有格式化 userdata。重启后 `sys.boot_completed=1`，`init.svc.console=stopped`，没有那条串口通知。设置保持在前台，`system_server` 的 pid 没变，日志里没有再出现 `Hardware config is only supported`。
 
+2026-10-29 第 2 项。开机后没有导航栏窗口。`overlay/frameworks/base/core/res/res/values/config.xml` 里 `config_showNavigationBar` 是 true，但这棵 overlay 没有进 product overlay，跑起来的框架值仍是 false。`qemu.hw.mainkeys` 是空的。`gpio-keys.kl` 只有音量加，`qpnp_pon.kl` 只有电源和音量减，没有实体返回、主页、最近任务。
+
+`system.prop` 写上 `qemu.hw.mainkeys=0`。`DisplayPolicy` 看到 0 就强制打开软件导航栏。手势沿用系统里已有的 `com.android.internal.systemui.navbar.gestural`，三键是 `config_navBarInteractionMode=0`。Quickstep 已经在 `TrebuchetQuickStep` 里，没有另装导航包。
+
+稀疏文件 1593160212 字节，SHA256 `64075779f342065245803419a616466eed36235701248775b18c8f466d2688b8`，展开后正好 3221225472。三段 Writing 都是 OKAY，总时间 71.8 秒。只刷了 system，boot 仍是 `#27`。没有格式化 userdata。
+
+重启后 `qemu.hw.mainkeys=0`，出现 `NavigationBar0`，范围 `[0,2392][1440,2560]`。三键是左边返回、中间主页、右边最近任务。用户在设置里改成全面屏手势之后，返回、回桌面、最近任务也能用，再切回三键同样可以。脚本点按发生在已经切到手势之后，点在三键坐标上，那一次不算失败。
+
 ## 事件
 
 - 2026-10-29：第 1 项。`ro.hardware.egl=adreno`，用的是这台机器自己的 Adreno 用户态和 `a420_pm4.fw`、`a420_pfp.fw`。system SHA256 `977197292482f6e18bd0647307bb3e42e30848d60fb3a20880433d9aef5c20b0`。只刷了 system，重启一次。Adreno 430，OpenGL ES 3.1，横条没有了，背光能灭能亮。细节在「实现笔记」。
 - 2026-10-29：第 2 项之前清 userdata。recovery 里 `mkfs.f2fs -l userdata -t 1 /dev/block/mmcblk0p39`，24.6 GB，挂上是空的。其它分区没写。重启后 adb 是 `unauthorized`，旧的 `adb_keys` 在这块盘上。细节在「开始前先清 userdata」。
 - 2026-10-29：清盘后的那次开机停在第一屏。`vold` 在 `needsCheckpoint()` 里等 `IBootControl`，锁不放，`setListener` 不返回。装上 `bootctrl.qcom` 和 `android.hardware.boot@1.0-impl`。不写 misc。细节在「实现笔记」。
 - 2026-10-29：开机后应用过几秒闪退，再重启进不了系统。`system_server` 在任务快照上 abort，因为 `Bitmap.copy(HARDWARE)` 被改成了软件位图。已改回硬件位图，并在 `on boot` 停掉 serial console。system SHA256 `165d579930970b4633c5c90feb1837740dd593deed41ea6f4035890048733b60`。只刷了 system。重启后进了系统，设置不再被系统拖死，串口通知没有了。细节在「实现笔记」。
+- 2026-10-29：第 2 项。`qemu.hw.mainkeys=0`，软件导航栏出现。三键和全面屏手势都能返回、回桌面、打开最近任务。system SHA256 `64075779f342065245803419a616466eed36235701248775b18c8f466d2688b8`。只刷了 system。细节在「实现笔记」。
